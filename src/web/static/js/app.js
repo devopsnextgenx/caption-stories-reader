@@ -101,11 +101,12 @@ async function loadXosFolder(path = '') {
             browserGrid.innerHTML = `<div class="placeholder-message">Failed to load XOS folder: ${data.detail || 'unknown error'}</div>`;
             return;
         }
-
+        
         currentPath.textContent = `/${data.path}`.replace(/\/\//g, '/');
         breadcrumb.innerHTML = renderXosBreadcrumb(data.path);
         const content = [];
 
+        // 1. Render Parent Directory Navigation
         if (data.parent !== null) {
             content.push(renderBrowserTile({
                 type: 'parent',
@@ -114,55 +115,51 @@ async function loadXosFolder(path = '') {
             }));
         }
 
+        // 2. ONLY render directory tiles in the main Browse Folder grid
         data.directories.forEach((entry) => content.push(renderBrowserTile(entry)));
-        data.files.forEach((entry) => content.push(renderBrowserTile(entry)));
+        
+        // REMOVED: data.files.forEach(...) loop from this grid completely
 
-        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">This folder is empty.</div>';
+        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">No subfolders found here.</div>';
+        
+        // Bind event listeners only to the active folder items
         bindBrowserTiles('#xos-browser-grid', '#xos-breadcrumb', loadXosFolder, openXosAlbum);
         populateFolderThumbnails('#xos-browser-grid', 'xos');
+        
         const pref = localStorage.getItem('xos_tile_size') || '128';
         applyTileSize(pref, '#xos-browser-grid');
 
+        // 3. Render and handle file layouts strictly inside the Folder Album zone below
         if (data.files && data.files.length) {
             if (albumView && albumTitle) {
                 albumView.classList.remove('hidden');
                 albumTitle.textContent = data.path.split('/').pop() || '/';
                 
-                const albumContent = document.getElementById(`${window.currentBrowser}-album-content`);
-                if (albumContent) {
-                    const prefix = window.currentBrowser === 'xos' ? '/xos/' : '/captions/';
+                const albumContent = document.getElementById('xos-album-content');
+                albumContent.innerHTML = data.files.map((f, index) => {
+                    const url = `/xos/${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
+                    const dimensions = f.width && f.height ? `${f.width}×${f.height}` : '';
                     
-                    albumContent.innerHTML = data.files.map((f, index) => {
-                        const url = `${prefix}${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
-                        // Fallback dimensions if properties are nested differently in your API payload
-                        const width = f.width || f.meta?.width || '';
-                        const height = f.height || f.meta?.height || '';
-                        const dimensions = width && height ? `${width}×${height}` : '';
-                        
-                        return `
-                            <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
-                                <div class="xos-thumb-wrap">
-                                    <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
-                                    ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
-                                    <span class="tile-index-badge">${index + 1}</span>
-                                </div>
-                                <div class="xos-file-meta-bar">
-                                    <span class="xos-file-name">${escapeHtml(f.name)}</span>
-                                    <div class="album-tile-actions">
-                                        <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
-                                        <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
-                                    </div>
+                    return `
+                        <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
+                            <div class="xos-thumb-wrap">
+                                <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
+                                ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
+                                <span class="tile-index-badge">${index + 1}</span>
+                            </div>
+                            <div class="xos-file-meta-bar">
+                                <span class="xos-file-name">${escapeHtml(f.name)}</span>
+                                <div class="album-tile-actions">
+                                    <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
+                                    <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
                                 </div>
                             </div>
-                        `;
-                    }).join('');
+                        </div>
+                    `;
+                }).join('');
 
-                    // Apply the sizing layout configurations
-                    applyTileSize(pref, `#${window.currentBrowser}-album-content`);
-                    
-                    // Directly attach listeners right here to guarantee link bindings
-                    bindAlbumPreviewListeners(`#${window.currentBrowser}-album-content`, data.files.map(f => f.path), window.currentBrowser);
-                }
+                applyTileSize(pref, '#xos-album-content');
+                bindAlbumPreviewListeners('#xos-album-content', data.files.map(f => f.path), 'xos');
             }
         } else if (albumView && albumTitle) {
             albumView.classList.add('hidden');
@@ -196,11 +193,11 @@ async function loadCaptionsFolder(path = '') {
         window.currentBrowser = 'captions';
         // Persist the last successfully loaded path
         localStorage.setItem('last_browse_path_captions', path);
-
         currentPath.textContent = `/${data.path}`.replace(/\/\//g, '/');
         breadcrumb.innerHTML = renderFolderBreadcrumb(data.path, 'captions');
         const content = [];
 
+        // 1. Parent Directory
         if (data.parent !== null) {
             content.push(renderBrowserTile({
                 type: 'parent',
@@ -209,55 +206,50 @@ async function loadCaptionsFolder(path = '') {
             }));
         }
 
+        // 2. ONLY folders allowed in the main folder view grid
         data.directories.forEach((entry) => content.push(renderBrowserTile(entry)));
-        data.files.forEach((entry) => content.push(renderBrowserTile(entry)));
+        
+        // REMOVED the data.files.forEach loop from this grid execution
 
-        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">This folder is empty.</div>';
-        bindBrowserTiles('#captions-browser-grid', '#captions-breadcrumb', loadCaptionsFolder, openCaptionsAlbum);
+        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">No subfolders found here.</div>';
+        
+        bindBrowserTiles('#captions-browser-grid', '#captions-breadcrumb', loadCaptionsFolderBrowsePage, openCaptionsAlbum);
         populateFolderThumbnails('#captions-browser-grid', 'captions');
+        
         const cpref = localStorage.getItem('captions_tile_size') || '128';
         applyTileSize(cpref, '#captions-browser-grid');
 
+        // 3. Move files strictly to the lower Folder Album section
         if (data.files && data.files.length) {
             if (albumView && albumTitle) {
                 albumView.classList.remove('hidden');
                 albumTitle.textContent = data.path.split('/').pop() || '/';
                 
-                const albumContent = document.getElementById(`${window.currentBrowser}-album-content`);
-                if (albumContent) {
-                    const prefix = window.currentBrowser === 'xos' ? '/xos/' : '/captions/';
+                const albumContent = document.getElementById('captions-album-content');
+                albumContent.innerHTML = data.files.map((f, index) => {
+                    const url = `/captions/${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
+                    const dimensions = f.width && f.height ? `${f.width}×${f.height}` : '';
                     
-                    albumContent.innerHTML = data.files.map((f, index) => {
-                        const url = `${prefix}${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
-                        // Fallback dimensions if properties are nested differently in your API payload
-                        const width = f.width || f.meta?.width || '';
-                        const height = f.height || f.meta?.height || '';
-                        const dimensions = width && height ? `${width}×${height}` : '';
-                        
-                        return `
-                            <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
-                                <div class="xos-thumb-wrap">
-                                    <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
-                                    ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
-                                    <span class="tile-index-badge">${index + 1}</span>
-                                </div>
-                                <div class="xos-file-meta-bar">
-                                    <span class="xos-file-name">${escapeHtml(f.name)}</span>
-                                    <div class="album-tile-actions">
-                                        <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
-                                        <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
-                                    </div>
+                    return `
+                        <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
+                            <div class="xos-thumb-wrap">
+                                <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
+                                ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
+                                <span class="tile-index-badge">${index + 1}</span>
+                            </div>
+                            <div class="xos-file-meta-bar">
+                                <span class="xos-file-name">${escapeHtml(f.name)}</span>
+                                <div class="album-tile-actions">
+                                    <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
+                                    <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
                                 </div>
                             </div>
-                        `;
-                    }).join('');
+                        </div>
+                    `;
+                }).join('');
 
-                    // Apply the sizing layout configurations
-                    applyTileSize(pref, `#${window.currentBrowser}-album-content`);
-                    
-                    // Directly attach listeners right here to guarantee link bindings
-                    bindAlbumPreviewListeners(`#${window.currentBrowser}-album-content`, data.files.map(f => f.path), window.currentBrowser);
-                }
+                applyTileSize(cpref, '#captions-album-content');
+                bindAlbumPreviewListeners('#captions-album-content', data.files.map(f => f.path), 'captions');
             }
         } else if (albumView && albumTitle) {
             albumView.classList.add('hidden');
@@ -731,6 +723,7 @@ async function loadXosFolder(path = '') {
         breadcrumb.innerHTML = renderXosBreadcrumb(data.path);
         const content = [];
 
+        // 1. Render Parent Directory Navigation
         if (data.parent !== null) {
             content.push(renderBrowserTile({
                 type: 'parent',
@@ -739,55 +732,51 @@ async function loadXosFolder(path = '') {
             }));
         }
 
+        // 2. ONLY render directory tiles in the main Browse Folder grid
         data.directories.forEach((entry) => content.push(renderBrowserTile(entry)));
-        data.files.forEach((entry) => content.push(renderBrowserTile(entry)));
+        
+        // REMOVED: data.files.forEach(...) loop from this grid completely
 
-        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">This folder is empty.</div>';
+        browserGrid.innerHTML = content.join('') || '<div class="placeholder-message">No subfolders found here.</div>';
+        
+        // Bind event listeners only to the active folder items
         bindBrowserTiles('#xos-browser-grid', '#xos-breadcrumb', loadXosFolder, openXosAlbum);
         populateFolderThumbnails('#xos-browser-grid', 'xos');
+        
         const pref = localStorage.getItem('xos_tile_size') || '128';
         applyTileSize(pref, '#xos-browser-grid');
 
+        // 3. Render and handle file layouts strictly inside the Folder Album zone below
         if (data.files && data.files.length) {
             if (albumView && albumTitle) {
                 albumView.classList.remove('hidden');
                 albumTitle.textContent = data.path.split('/').pop() || '/';
                 
-                const albumContent = document.getElementById(`${window.currentBrowser}-album-content`);
-                if (albumContent) {
-                    const prefix = window.currentBrowser === 'xos' ? '/xos/' : '/captions/';
+                const albumContent = document.getElementById('xos-album-content');
+                albumContent.innerHTML = data.files.map((f, index) => {
+                    const url = `/xos/${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
+                    const dimensions = f.width && f.height ? `${f.width}×${f.height}` : '';
                     
-                    albumContent.innerHTML = data.files.map((f, index) => {
-                        const url = `${prefix}${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
-                        // Fallback dimensions if properties are nested differently in your API payload
-                        const width = f.width || f.meta?.width || '';
-                        const height = f.height || f.meta?.height || '';
-                        const dimensions = width && height ? `${width}×${height}` : '';
-                        
-                        return `
-                            <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
-                                <div class="xos-thumb-wrap">
-                                    <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
-                                    ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
-                                    <span class="tile-index-badge">${index + 1}</span>
-                                </div>
-                                <div class="xos-file-meta-bar">
-                                    <span class="xos-file-name">${escapeHtml(f.name)}</span>
-                                    <div class="album-tile-actions">
-                                        <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
-                                        <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
-                                    </div>
+                    return `
+                        <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
+                            <div class="xos-thumb-wrap">
+                                <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
+                                ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
+                                <span class="tile-index-badge">${index + 1}</span>
+                            </div>
+                            <div class="xos-file-meta-bar">
+                                <span class="xos-file-name">${escapeHtml(f.name)}</span>
+                                <div class="album-tile-actions">
+                                    <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path" style="cursor:pointer; margin-right:6px;">📋</i>
+                                    <a href="${url}" download class="icon-download action-btn-inline" title="Download">⬇️</a>
                                 </div>
                             </div>
-                        `;
-                    }).join('');
+                        </div>
+                    `;
+                }).join('');
 
-                    // Apply the sizing layout configurations
-                    applyTileSize(pref, `#${window.currentBrowser}-album-content`);
-                    
-                    // Directly attach listeners right here to guarantee link bindings
-                    bindAlbumPreviewListeners(`#${window.currentBrowser}-album-content`, data.files.map(f => f.path), window.currentBrowser);
-                }
+                applyTileSize(pref, '#xos-album-content');
+                bindAlbumPreviewListeners('#xos-album-content', data.files.map(f => f.path), 'xos');
             }
         } else if (albumView && albumTitle) {
             albumView.classList.add('hidden');

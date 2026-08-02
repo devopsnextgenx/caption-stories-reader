@@ -17,7 +17,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function bindAlbumPreviewListeners(containerSelector, allImagePaths, contextNamespace) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    container.querySelectorAll('.album-preview-tile').forEach((tile) => {
+        tile.addEventListener('click', (e) => {
+            // Intercept inline inline copy/download utilities
+            const actionBtn = e.target.closest('.action-btn-inline');
+            if (actionBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                const action = actionBtn.dataset.action || (actionBtn.tagName === 'A' ? 'download' : '');
+                const path = tile.getAttribute('data-path');
+                if (action === 'copy') {
+                    navigator.clipboard.writeText(path).then(() => alert('Path copied!'));
+                }
+                return;
+            }
+
+            // Launch Slideshow matching the specific index positioning clicked
+            const path = tile.getAttribute('data-path');
+            const startIndex = allImagePaths.indexOf(path);
+            
+            if (typeof window.openSlideshow === 'function') {
+                window.openSlideshow(allImagePaths, startIndex < 0 ? 0 : startIndex, contextNamespace);
+            } else {
+                console.error("Slideshow module is not initialized globally.");
+            }
+        });
+    });
+}
+
 async function loadXosFolder(path = '') {
+    window.currentBrowser = 'xos';
+    localStorage.setItem('last_active_tab', 'xos');
+    localStorage.setItem('last_browse_path_xos', path); // Hard sync state
+
     const browserGrid = document.getElementById('xos-browser-grid');
     const breadcrumb = document.getElementById('xos-breadcrumb');
     const currentPath = document.getElementById('xos-current-path');
@@ -25,7 +61,6 @@ async function loadXosFolder(path = '') {
     const albumTitle = document.getElementById('xos-album-title');
 
     if (!browserGrid || !breadcrumb || !currentPath) return;
-
     browserGrid.innerHTML = '<div class="placeholder-message">Loading folder contents...</div>';
 
     try {
@@ -37,10 +72,6 @@ async function loadXosFolder(path = '') {
             return;
         }
 
-        window.currentBrowser = 'xos';
-        // Persist the last successfully loaded path
-        localStorage.setItem('last_browse_path_xos', path);
-        
         currentPath.textContent = `/${data.path}`.replace(/\/\//g, '/');
         breadcrumb.innerHTML = renderXosBreadcrumb(data.path);
         const content = [];
@@ -66,10 +97,35 @@ async function loadXosFolder(path = '') {
             if (albumView && albumTitle) {
                 albumView.classList.remove('hidden');
                 albumTitle.textContent = data.path.split('/').pop() || '/';
+                
                 const albumContent = document.getElementById('xos-album-content');
-                albumContent.innerHTML = data.files.map(f => `<img src="/xos/${encodeURIComponent(f.path).replace(/%2F/g, '/')}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">`).join('');
-                const pref = localStorage.getItem('xos_tile_size') || '128';
+                
+                // Generate proper interactive tile structures instead of naked <img> tags
+                albumContent.innerHTML = data.files.map((f, index) => {
+                    const url = `/xos/${encodeURIComponent(f.path).replace(/%2F/g, '/')}`;
+                    const dimensions = f.width && f.height ? `${f.width}×${f.height}` : '';
+                    
+                    return `
+                        <div class="xos-file-tile album-preview-tile" data-path="${escapeHtml(f.path)}" data-type="file" data-index="${index}">
+                            <div class="xos-thumb-wrap">
+                                <img src="${url}" class="xos-album-thumb" alt="${escapeHtml(f.name)}">
+                                ${dimensions ? `<span class="tile-dimension-badge">${dimensions}</span>` : ''}
+                                <span class="tile-index-badge">${index + 1}</span>
+                            </div>
+                            <div class="xos-file-meta-bar">
+                                <span class="xos-file-name">${escapeHtml(f.name)}</span>
+                                <div class="album-tile-actions">
+                                    <i class="icon-copy action-btn-inline" data-action="copy" title="Copy Path"></i>
+                                    <a href="${url}" download class="icon-download action-btn-inline" title="Download"></a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Apply sizing preferences and attach separate event listeners to the album preview container
                 applyTileSize(pref, '#xos-album-content');
+                bindAlbumPreviewListeners('#xos-album-content', data.files.map(f => f.path), 'xos');
             }
         } else if (albumView && albumTitle) {
             albumView.classList.add('hidden');
@@ -464,11 +520,20 @@ async function initBrowsePage() {
         });
     }
 
-    /* Inside initBrowsePage() replace the final lines with: */
+    // ── Restore Tab and Path State on Refresh ──
     const pathName = window.location.pathname;
-    const initialBrowse = pathName === '/browse/xos' ? 'xos' : 'captions';
-    // Check URL param first, fallback to localStorage cache, default to empty root
-    const initialPath = getQueryParam('path') || localStorage.getItem(`last_browse_path_${initialBrowse}`) || '';
+    let initialBrowse = pathName === '/browse/xos' ? 'xos' : 'captions';
+    
+    if (pathName === '/browse' || pathName === '/browse/') {
+        initialBrowse = localStorage.getItem('last_active_tab') || 'captions';
+        window.history.replaceState({}, '', `/browse/${initialBrowse}`);
+    }
+
+    // Force pull directly from storage first to avoid old query string overrides on direct refresh
+    const initialPath = localStorage.getItem(`last_browse_path_${initialBrowse}`) || getQueryParam('path') || '';
+
+    localStorage.setItem('last_active_tab', initialBrowse);
+    syncActiveSizeSelect(initialBrowse);
     switchStudioTab(initialBrowse, initialPath);
 }
 
@@ -490,10 +555,16 @@ function switchStudioTab(tab, path = '') {
     if (captionsPane) captionsPane.classList.toggle('hidden', tab !== 'captions');
     if (xosPane) xosPane.classList.toggle('hidden', tab !== 'xos');
 
+    // Save current active tab to storage
+    localStorage.setItem('last_active_tab', tab);
+
+    // Fetch the last known path for the selected tab if no explicit path argument was provided
+    const targetPath = path || localStorage.getItem(`last_browse_path_${tab}`) || '';
+
     if (tab === 'captions') {
-        loadCaptionsFolder(path);
+        loadCaptionsFolder(targetPath);
     } else {
-        loadXosFolder(path);
+        loadXosFolder(targetPath);
     }
 }
 
@@ -726,7 +797,6 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
     const grid = document.querySelector(containerSelector);
     if (!grid) return;
 
-    // Remove any stale listeners by cloning or direct targeting
     grid.querySelectorAll('.xos-folder-tile, .xos-file-tile').forEach((tile) => {
         tile.addEventListener('click', (e) => {
             const isSelectionModeActive = document.getElementById('selection-mode-checkbox')?.checked;
@@ -735,9 +805,11 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
             const checkEl = e.target.closest('[data-role="select-check"]');
             if (checkEl) {
                 e.stopPropagation();
-                // If it's a folder and selection mode is off, treat it as a directory click instead
                 if (tile.classList.contains('xos-folder-tile') && !isSelectionModeActive) {
-                    onDirectory(tile.dataset.path || '');
+                    const path = tile.getAttribute('data-path') || '';
+                    const tab = window.currentBrowser || 'captions';
+                    localStorage.setItem(`last_browse_path_${tab}`, path);
+                    onDirectory(path);
                     return;
                 }
                 tile.classList.toggle('selected');
@@ -750,27 +822,37 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
             if (actionBtn) {
                 e.stopPropagation();
                 const action = actionBtn.dataset.action;
-                const path = tile.dataset.path || '';
-                const type = tile.dataset.type;
+                const path = tile.getAttribute('data-path') || '';
+                const type = tile.getAttribute('data-type');
                 handleTileAction(action, path, type, tile);
                 return;
             }
 
-            // 3. Standard Tile Click Action
-            const path = tile.dataset.path || '';
-            const type = tile.dataset.type;
+            // 3. Standard Tile Click Action - Core Target Correction
+            // Using e.currentTarget guarantees we extract from the container that holds the data attributes
+            const currentTile = e.currentTarget;
+            const path = currentTile.getAttribute('data-path') || '';
+            const type = currentTile.getAttribute('data-type');
             
             if (type === 'directory') {
+                const tab = window.currentBrowser || 'captions';
+                localStorage.setItem(`last_browse_path_${tab}`, path);
                 onDirectory(path);
-            } else {
-                // Forceful path execution for files
+            } else if (type === 'file') {
+                // Forceful file processing execution
                 onFile(path);
             }
         });
     });
 
+    // Capture breadcrumb navigation clicks safely
     document.querySelectorAll(`${breadcrumbSelector} .breadcrumb-button`).forEach((crumb) => {
-        crumb.addEventListener('click', () => onDirectory(crumb.dataset.path || ''));
+        crumb.addEventListener('click', (e) => {
+            const path = e.currentTarget.getAttribute('data-path') || '';
+            const tab = window.currentBrowser || 'captions';
+            localStorage.setItem(`last_browse_path_${tab}`, path);
+            onDirectory(path);
+        });
     });
 }
 

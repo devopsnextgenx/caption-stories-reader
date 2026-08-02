@@ -1659,3 +1659,70 @@ footer {
 .xos-file-label, .xos-folder-label, .xos-file-name, .xos-file-meta {
   pointer-events: none;
 }
+
+/* Layout alignment for Album Grid Containers */
+#xos-album-content, #captions-album-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-size, 128px), 1fr));
+    gap: 12px;
+    padding: 10px 0;
+}
+
+/* Ensure preview tiles match interactive scaling styles */
+.album-preview-tile {
+    position: relative;
+    border: 1px solid #2d3748;
+    background: #1a202c;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.album-preview-tile:hover {
+    transform: translateY(-2px);
+    border-color: #3182ce;
+}
+
+/* Badge Layout Formatting rules matching snapshot criteria */
+.tile-dimension-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    pointer-events: none;
+}
+
+.tile-index-badge {
+    position: absolute;
+    bottom: 4px;
+    left: 4px;
+    background: rgba(45, 55, 72, 0.9);
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 3px;
+    pointer-events: none;
+}
+
+.xos-file-meta-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    font-size: 12px;
+}
+
+.xos-file-name {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 70%;
+}

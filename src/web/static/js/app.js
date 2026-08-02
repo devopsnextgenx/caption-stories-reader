@@ -468,7 +468,6 @@ async function initCaptionsStudio() {
     }
 
     const initialBrowse = getQueryParam('browse') || 'captions';
-    // Check URL param first, fallback to localStorage cache, default to empty root
     const initialPath = getQueryParam('path') || localStorage.getItem(`last_browse_path_${initialBrowse}`) || '';
     switchStudioTab(initialBrowse, initialPath);
 }
@@ -570,7 +569,6 @@ async function initBrowsePage() {
         window.history.replaceState({}, '', `/browse/${initialBrowse}`);
     }
 
-    // Force pull directly from storage first to avoid old query string overrides on direct refresh
     const initialPath = localStorage.getItem(`last_browse_path_${initialBrowse}`) || getQueryParam('path') || '';
 
     localStorage.setItem('last_active_tab', initialBrowse);
@@ -596,10 +594,7 @@ function switchStudioTab(tab, path = '') {
     if (captionsPane) captionsPane.classList.toggle('hidden', tab !== 'captions');
     if (xosPane) xosPane.classList.toggle('hidden', tab !== 'xos');
 
-    // Save current active tab to storage
     localStorage.setItem('last_active_tab', tab);
-
-    // Fetch the last known path for the selected tab if no explicit path argument was provided
     const targetPath = path || localStorage.getItem(`last_browse_path_${tab}`) || '';
 
     if (tab === 'captions') {
@@ -742,7 +737,6 @@ function renderBrowserTile(entry) {
         ? `/xos/${encodeURIComponent(entry.path).replace(/%2F/g, '/')}`
         : `/captions/${encodeURIComponent(entry.path).replace(/%2F/g, '/')}`;
     
-    // Display Dimensions cleanly alongside Size if present in properties
     const dimensionsStr = (entry.width && entry.height) ? `${entry.width}x${entry.height}` : (entry.dimensions ? entry.dimensions : '');
     const sizeStr = entry.size_bytes ? formatFileSize(entry.size_bytes) : (entry.extension || '').replace(/^\./, '').toUpperCase();
     const meta = dimensionsStr ? `${dimensionsStr} • ${sizeStr}` : sizeStr;
@@ -782,7 +776,6 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
         tile.addEventListener('click', (e) => {
             const isSelectionModeActive = document.getElementById('selection-mode-checkbox')?.checked;
 
-            // 1. Handle selection checkbox click explicitly
             const checkEl = e.target.closest('[data-role="select-check"]');
             if (checkEl) {
                 e.stopPropagation();
@@ -798,7 +791,6 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
                 return;
             }
 
-            // 2. Handle action button clicks
             const actionBtn = e.target.closest('.tile-action-btn');
             if (actionBtn) {
                 e.stopPropagation();
@@ -809,7 +801,6 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
                 return;
             }
 
-            // 3. Standard Tile Click Action - Core Target Correction
             const currentTile = e.currentTarget;
             const path = currentTile.getAttribute('data-path') || '';
             const type = currentTile.getAttribute('data-type');
@@ -824,7 +815,6 @@ function bindBrowserTiles(containerSelector, breadcrumbSelector, onDirectory, on
         });
     });
 
-    // Capture breadcrumb navigation clicks safely
     document.querySelectorAll(`${breadcrumbSelector} .breadcrumb-button`).forEach((crumb) => {
         crumb.addEventListener('click', (e) => {
             const path = e.currentTarget.getAttribute('data-path') || '';
@@ -911,7 +901,7 @@ function handleTileAction(action, path, type, tile) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SLIDESHOW MODULE
+   UNIFIED SLIDESHOW & METADATA VIEWER MODULE
 ══════════════════════════════════════════════════════════ */
 (function () {
     let ss = {
@@ -926,9 +916,9 @@ function handleTileAction(action, path, type, tile) {
         _progressStart: null,
         _nativeSize: false,
         overlay: null,
+        isResizing: false
     };
 
-    // Document-level fallback so arrow/Escape keys work even when overlay loses focus
     document.addEventListener('keydown', function (e) {
         if (!ss.overlay) return;
         handleKey(e);
@@ -936,13 +926,13 @@ function handleTileAction(action, path, type, tile) {
 
     window.openSlideshow = function (paths, startIndex, browserType) {
         if (!paths || !paths.length) return;
-        ss.paths       = paths;
-        ss.index       = Math.max(0, Math.min(startIndex, paths.length - 1));
-        ss.browserType = browserType || 'xos';
-        ss.playing     = false;
-        ss.random      = false;
-        ss.intervalSecs= 7;
-        ss._nativeSize = false;
+        ss.paths        = paths;
+        ss.index        = Math.max(0, Math.min(startIndex, paths.length - 1));
+        ss.browserType  = browserType || 'xos';
+        ss.playing      = false;
+        ss.random       = false;
+        ss.intervalSecs = 7;
+        ss._nativeSize  = false;
 
         buildOverlay();
         loadImage(ss.index, null);
@@ -950,19 +940,33 @@ function handleTileAction(action, path, type, tile) {
     };
 
     function imgUrl(path) {
-        const prefix = ss.browserType === 'xos' ? '/xos' : '/captions';
-        return `${prefix}/${encodeURIComponent(path).replace(/%2F/g, '/')}`;
+        // Remove any leading/trailing whitespace or accidental multi-slashes
+        let cleanPath = path.replace(/^\/+/, '').replace(/\\/g, '/');
+        
+        // If the path contains 'data/captions/' or starts with it, clean it up
+        if (cleanPath.startsWith('data/captions/')) {
+            cleanPath = cleanPath.substring('data/'.length); // Leaves 'captions/...'
+        }
+        
+        // Double check if it now starts with the clean namespace
+        if (cleanPath.startsWith('captions/') || cleanPath.startsWith('xos/')) {
+            return '/' + encodeURIComponent(cleanPath).replace(/%2F/g, '/');
+        }
+        
+        // Fallback for raw filenames without directory contexts
+        const prefix = ss.browserType === 'xos' ? 'xos' : 'captions';
+        return `/${prefix}/${encodeURIComponent(cleanPath).replace(/%2F/g, '/')}`;
     }
 
     function buildOverlay() {
         closeSlideshow(false);
 
         const o = document.createElement('div');
-        o.className  = 'slideshow-overlay';
+        o.className  = 'slideshow-overlay Unified-ss-shell-viewport';
         o.tabIndex   = -1;
         o.setAttribute('role', 'dialog');
         o.setAttribute('aria-modal', 'true');
-        o.setAttribute('aria-label', 'Image slideshow');
+        o.setAttribute('aria-label', 'Image slideshow and metadata viewer');
         o.id = 'slideshow-overlay';
 
         o.innerHTML = `
@@ -997,16 +1001,25 @@ function handleTileAction(action, path, type, tile) {
               <button class="ss-close-btn" id="ss-close-btn" title="Close (Esc)">✕</button>
             </div>
           </div>
-          <div class="ss-stage" id="ss-stage">
-            <button class="ss-nav-btn ss-prev" id="ss-prev-btn" aria-label="Previous image">&#8249;</button>
-            <div class="ss-img-wrap fit" id="ss-img-wrap">
-              <div class="ss-spinner" id="ss-spinner"></div>
+          
+          <div class="caption-viewer-body ss-split-stage-layout">
+            <div class="caption-viewer-image-pane ss-stage-pane" id="ss-stage">
+                <button class="ss-nav-btn ss-prev" id="ss-prev-btn" aria-label="Previous image">&#8249;</button>
+                <div class="ss-img-wrap fit" id="ss-img-wrap">
+                  <div class="ss-spinner" id="ss-spinner"></div>
+                </div>
+                <button class="ss-nav-btn ss-next" id="ss-next-btn" aria-label="Next image">&#8250;</button>
+                <div class="ss-progress-track" id="ss-progress-track">
+                  <div class="ss-progress-fill" id="ss-progress-fill"></div>
+                </div>
             </div>
-            <button class="ss-nav-btn ss-next" id="ss-next-btn" aria-label="Next image">&#8250;</button>
-            <div class="ss-progress-track" id="ss-progress-track">
-              <div class="ss-progress-fill" id="ss-progress-fill"></div>
+            <div class="caption-viewer-divider hidden" id="ss-pane-divider"></div>
+            <div class="caption-viewer-yaml-pane hidden" id="ss-yaml-pane">
+                <div class="caption-viewer-pane-header">YAML metadata</div>
+                <pre class="caption-viewer-code yaml-syntax" id="ss-yaml-code">Loading YAML…</pre>
             </div>
           </div>
+          
           <div class="ss-filmstrip" id="ss-filmstrip"></div>
         `;
 
@@ -1083,6 +1096,33 @@ function handleTileAction(action, path, type, tile) {
             closeSlideshow(true);
         });
 
+        // Split-pane dragging engine implementation
+        const divider = o.querySelector('#ss-pane-divider');
+        const yamlPane = o.querySelector('#ss-yaml-pane');
+        
+        divider.addEventListener('pointerdown', (event) => {
+            event.preventDefault();
+            ss.isResizing = true;
+            divider.setPointerCapture(event.pointerId);
+        });
+
+        o.addEventListener('pointermove', (event) => {
+            if (!ss.isResizing) return;
+            const container = o.querySelector('.ss-split-stage-layout');
+            const rect = container.getBoundingClientRect();
+            const dividerX = event.clientX - rect.left;
+            const width = rect.width - dividerX;
+            
+            const minWidth = 350;
+            const maxWidth = rect.width - 350;
+            const targetWidth = Math.max(minWidth, Math.min(maxWidth, width));
+            container.style.setProperty('--yaml-width', `${targetWidth}px`);
+        });
+
+        const stopResizing = () => { ss.isResizing = false; };
+        o.addEventListener('pointerup', stopResizing);
+        o.addEventListener('pointercancel', stopResizing);
+
         o.addEventListener('keydown', handleKey);
     }
 
@@ -1117,12 +1157,15 @@ function handleTileAction(action, path, type, tile) {
         if (ss.playing) { stopPlay(); startPlay(); }
     }
 
-    function loadImage(index, animDir) {
+    async function loadImage(index, animDir) {
         const o       = ss.overlay;
         const wrap    = o.querySelector('#ss-img-wrap');
         const spinner = o.querySelector('#ss-spinner');
         const titleEl = o.querySelector('#ss-title');
         const cntEl   = o.querySelector('#ss-counter');
+        const divider = o.querySelector('#ss-pane-divider');
+        const yamlPane = o.querySelector('#ss-yaml-pane');
+        const codeEl  = o.querySelector('#ss-yaml-code');
 
         const path = ss.paths[index];
         titleEl.textContent = path.split('/').pop();
@@ -1133,36 +1176,53 @@ function handleTileAction(action, path, type, tile) {
         wrap.classList.add('fit');
         wrap.classList.remove('native');
 
-        spinner.style.display = 'block';
-        const oldImg = wrap.querySelector('img');
-        if (oldImg) oldImg.remove();
+        // CRITICAL FIX: Empty the container immediately to evict the previous image 
+        // before the new image finishes loading asynchronously.
+        wrap.innerHTML = '<div class="ss-spinner" id="ss-spinner"></div>';
+        const newSpinner = wrap.querySelector('#ss-spinner');
+        if (newSpinner) newSpinner.style.display = 'block';
 
         const img = new Image();
         img.alt   = path.split('/').pop();
         img.draggable = false;
 
         img.onload = () => {
-            spinner.style.display = 'none';
+            newSpinner.style.display = 'none';
             wrap.classList.remove('anim-left', 'anim-right');
             wrap.appendChild(img);
             void wrap.offsetWidth;
             if (animDir) wrap.classList.add(animDir === 'left' ? 'anim-left' : 'anim-right');
-
-            if (index === 0 && !o.querySelector('.ss-hint')) {
-                const hint = document.createElement('div');
-                hint.className   = 'ss-hint';
-                hint.textContent = 'Double-click image to view at 100%';
-                o.querySelector('#ss-stage').appendChild(hint);
-                setTimeout(() => hint.remove(), 4200);
-            }
         };
 
         img.onerror = () => {
-            spinner.style.display = 'none';
+            newSpinner.style.display = 'none';
             wrap.innerHTML = `<div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">Failed to load image</div>`;
         };
 
         img.src = imgUrl(path);
+
+        // Look up item inside gallery descriptors to fetch YAML metadata dynamically
+        let item = null;
+        if (Array.isArray(window.captionGalleryItems)) {
+            item = window.captionGalleryItems.find(c => c.image_path === path || c.image_filename === path || c.yml_path === path);
+        }
+
+        if (item && item.yml_path) {
+            divider.classList.remove('hidden');
+            yamlPane.classList.remove('hidden');
+            codeEl.textContent = 'Loading Metadata Info…';
+            try {
+                const response = await fetch(`/api/captions/details?yml_path=${encodeURIComponent(item.yml_path)}`);
+                const payload = await response.json();
+                const yamlText = payload.yaml_text || JSON.stringify(payload.data || payload, null, 2);
+                codeEl.innerHTML = highlightYaml(yamlText);
+            } catch (err) {
+                codeEl.textContent = `Unable to load details.\n${err.message}`;
+            }
+        } else {
+            divider.classList.add('hidden');
+            yamlPane.classList.add('hidden');
+        }
     }
 
     function togglePlay() {
@@ -1229,13 +1289,20 @@ function handleTileAction(action, path, type, tile) {
     function closeSlideshow(restoreScroll) {
         stopPlay();
         if (ss.overlay && ss.overlay.parentNode) {
-            ss.overlay.removeEventListener('keydown', handleKey);
             ss.overlay.remove();
         }
         ss.overlay = null;
         if (restoreScroll) document.body.style.overflow = '';
     }
 })();
+
+// Re-expose runtime binding logic targeting legacy callers safely
+window.openYamlViewer = function(ymlPath, index = 0) {
+    if (Array.isArray(window.captionGalleryItems) && window.captionGalleryItems.length) {
+        const paths = window.captionGalleryItems.map(c => c.image_path || c.yml_path);
+        window.openSlideshow(paths, index, 'captions');
+    }
+};
 
 function formatFileSize(bytes) {
     if (bytes < 1024) return `${bytes} B`;
@@ -1383,16 +1450,15 @@ function bindGalleryCardActions() {
         const openCardViewer = (event) => {
             if (event) event.stopPropagation();
             const targetIndex = Number(button ? button.dataset.index || index : image.dataset.index || index);
-            openYamlViewer(ymlPath || image?.dataset?.ymlPath || '', targetIndex);
+            
+            if (Array.isArray(window.captionGalleryItems) && window.captionGalleryItems.length) {
+                const paths = window.captionGalleryItems.map(c => c.image_path || c.yml_path);
+                openSlideshow(paths, targetIndex, 'captions');
+            }
         };
 
-        if (button) {
-            button.addEventListener('click', openCardViewer);
-        }
-
-        if (image) {
-            image.addEventListener('click', openCardViewer);
-        }
+        if (button) button.addEventListener('click', openCardViewer);
+        if (image) image.addEventListener('click', openCardViewer);
     });
 }
 
@@ -1405,172 +1471,6 @@ function resolveCaptionImageUrl(item) {
 
     const normalized = String(imagePath).replace(/\\/g, '/').replace(/^\/+/, '');
     return `/captions/${encodeURIComponent(normalized).replace(/%2F/g, '/')}`;
-}
-
-async function openYamlViewer(ymlPath, index = 0) {
-    if (!ymlPath) return;
-
-    const items = Array.isArray(window.captionGalleryItems) ? window.captionGalleryItems : [];
-    if (!items.length) return;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'caption-viewer-overlay slideshow-overlay';
-    overlay.innerHTML = `
-        <div class="caption-viewer-shell">
-            <div class="caption-viewer-toolbar ss-topbar">
-                <div class="caption-viewer-toolbar-title">
-                    <button class="caption-viewer-nav-btn ss-ctrl-btn" id="caption-viewer-prev" type="button">←</button>
-                    <div>
-                        <div class="caption-viewer-title">Caption Viewer</div>
-                        <div class="caption-viewer-subtitle" id="caption-viewer-title"></div>
-                    </div>
-                    <button class="caption-viewer-nav-btn ss-ctrl-btn" id="caption-viewer-next" type="button">→</button>
-                </div>
-                <button class="caption-viewer-close ss-close-btn" id="caption-viewer-close" type="button">✕</button>
-            </div>
-            <div class="caption-viewer-body">
-                <div class="caption-viewer-image-pane">
-                    <div class="caption-viewer-image-frame">
-                        <img id="caption-viewer-image" alt="Caption preview" class="caption-viewer-image" />
-                    </div>
-                </div>
-                <div class="caption-viewer-divider" id="caption-viewer-divider"></div>
-                <div class="caption-viewer-yaml-pane">
-                    <div class="caption-viewer-pane-header">YAML metadata</div>
-                    <pre class="caption-viewer-code yaml-syntax" id="caption-viewer-code">Loading YAML…</pre>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-    document.body.style.overflow = 'hidden';
-
-    const shell = overlay.querySelector('.caption-viewer-shell');
-    const imageEl = overlay.querySelector('#caption-viewer-image');
-    const titleEl = overlay.querySelector('#caption-viewer-title');
-    const codeEl = overlay.querySelector('#caption-viewer-code');
-    const divider = overlay.querySelector('#caption-viewer-divider');
-    const closeBtn = overlay.querySelector('#caption-viewer-close');
-    const prevBtn = overlay.querySelector('#caption-viewer-prev');
-    const nextBtn = overlay.querySelector('#caption-viewer-next');
-    let activeIndex = items.findIndex((item) => item.yml_path === ymlPath || item.yml_file === ymlPath);
-    activeIndex = activeIndex >= 0 ? activeIndex : Math.max(0, Math.min(index, items.length - 1));
-    let isResizing = false;
-
-    const setYamlWidth = (width) => {
-        const bodyWidth =
-            shell.querySelector('.caption-viewer-body').clientWidth;
-
-        const minWidth = 400;
-        const maxWidth = bodyWidth - 350;   // leave room for image
-
-        shell.style.setProperty(
-            '--yaml-width',
-            `${Math.max(minWidth, Math.min(maxWidth, width))}px`
-        );
-    };
-
-    const updateViewer = async () => {
-        const item = items[activeIndex];
-        if (!item) return;
-        const imgUrl = resolveCaptionImageUrl(item);
-        const displayName = item.image_filename || item.image_path || item.yml_file || 'Caption';
-        titleEl.textContent = displayName;
-        imageEl.src = imgUrl;
-        imageEl.alt = displayName;
-        codeEl.textContent = 'Loading YAML…';
-
-        try {
-            const response = await fetch(`/api/captions/details?yml_path=${encodeURIComponent(item.yml_path || '')}`);
-            const payload = await response.json();
-            const yamlText = payload.yaml_text || JSON.stringify(payload.data || payload, null, 2);
-            codeEl.innerHTML = highlightYaml(yamlText);
-        } catch (err) {
-            codeEl.textContent = `Unable to load YAML details.\n${err.message}`;
-        }
-    };
-
-    prevBtn.addEventListener('click', () => {
-        activeIndex = (activeIndex - 1 + items.length) % items.length;
-        updateViewer();
-    });
-
-    nextBtn.addEventListener('click', () => {
-        activeIndex = (activeIndex + 1) % items.length;
-        updateViewer();
-    });
-
-    closeBtn.addEventListener('click', () => {
-        document.body.style.overflow = '';
-        overlay.remove();
-    });
-
-    overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) {
-            document.body.style.overflow = '';
-            overlay.remove();
-        }
-    });
-
-    divider.addEventListener('pointerdown', (event) => {
-        event.preventDefault();
-        isResizing = true;
-        divider.setPointerCapture(event.pointerId);
-    });
-
-    overlay.addEventListener('pointermove', (event) => {
-        if (!isResizing) return;
-        const bodyRect = shell.querySelector('.caption-viewer-body').getBoundingClientRect();
-        const dividerX = event.clientX - bodyRect.left;
-        const width = bodyRect.width - dividerX;
-        setYamlWidth(width);
-    });
-
-    const stopResizing = () => {
-        isResizing = false;
-    };
-
-    overlay.addEventListener('pointerup', stopResizing);
-    overlay.addEventListener('pointercancel', stopResizing);
-
-    // Keyboard navigation: arrows to change image, Escape to close
-    function handleViewerKey(e) {
-        if (!overlay.isConnected) return;
-        switch (e.key) {
-            case 'ArrowRight':
-            case 'ArrowDown':
-                e.preventDefault();
-                activeIndex = (activeIndex + 1) % items.length;
-                updateViewer();
-                break;
-            case 'ArrowLeft':
-            case 'ArrowUp':
-                e.preventDefault();
-                activeIndex = (activeIndex - 1 + items.length) % items.length;
-                updateViewer();
-                break;
-            case 'Escape':
-                e.preventDefault();
-                document.body.style.overflow = '';
-                overlay.remove();
-                document.removeEventListener('keydown', handleViewerKey);
-                break;
-        }
-    }
-    document.addEventListener('keydown', handleViewerKey);
-
-    // Clean up key listener when overlay is closed via button or backdrop click
-    closeBtn.addEventListener('click', () => {
-        document.removeEventListener('keydown', handleViewerKey);
-    });
-    overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) {
-            document.removeEventListener('keydown', handleViewerKey);
-        }
-    }, { once: true });
-
-    updateViewer();
 }
 
 function renderCaptionCard(item, index = 0) {
@@ -1602,10 +1502,7 @@ function highlightYaml(text) {
         .split('\n')
         .map(line => {
             const m = line.match(/^(\s*)([^:#]+):(.*)$/);
-
-            if (!m)
-                return line;
-
+            if (!m) return line;
             return `${m[1]}<span class="yaml-key">${m[2]}</span><span class="yaml-punctuation">:</span>${highlightYamlValue(m[3])}`;
         })
         .join('\n');
@@ -1613,21 +1510,11 @@ function highlightYaml(text) {
 
 function highlightYamlValue(value) {
     return value
-        .replace(
-            /"(.*?)"|'(.*?)'/g,
-            '<span class="yaml-string">$&</span>'
-        )
-        .replace(
-            /\b(true|false|null)\b/g,
-            '<span class="yaml-boolean">$1</span>'
-        )
-        .replace(
-            /\b-?\d+(\.\d+)?\b/g,
-            '<span class="yaml-number">$&</span>'
-        );
+        .replace(/"(.*?)"|'(.*?)'/g, '<span class="yaml-string">$&</span>')
+        .replace(/\b(true|false|null)\b/g, '<span class="yaml-boolean">$1</span>')
+        .replace(/\b-?\d+(\.\d+)?\b/g, '<span class="yaml-number">$&</span>');
 }
 
-/* Helper functions for escaping HTML content securely */
 function escapeHtml(str) {
     if (!str) return '';
     return String(str)

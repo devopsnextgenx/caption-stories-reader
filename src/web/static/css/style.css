@@ -2247,3 +2247,88 @@ footer {
     max-height: 24vh;
   }
 }
+
+/* Unified Staging & Metadata Split Pane Styles extensions */
+.Unified-ss-shell-viewport {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+}
+
+.ss-split-stage-layout {
+  display: flex !important;
+  flex: 1 !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  position: relative !important;
+  overflow: hidden !important;
+  --yaml-width: 450px;
+}
+
+.ss-stage-pane {
+  flex: 1 !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+}
+
+.caption-viewer-divider {
+  width: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  cursor: col-resize;
+  transition: background 0.2s ease;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.caption-viewer-divider:hover {
+  background: var(--primary);
+}
+
+.caption-viewer-yaml-pane {
+  width: var(--yaml-width);
+  max-width: 70vw;
+  background: rgba(10, 18, 36, 0.85);
+  backdrop-filter: var(--glass-blur);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.caption-viewer-pane-header {
+  padding: 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.caption-viewer-code {
+  flex: 1;
+  padding: 1.25rem;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #e2e8f0;
+  background: #040814;
+  white-space: pre-wrap;
+}
+
+/* Metadata Syntax Highlights styling rules */
+.yaml-key { color: #f43f5e; font-weight: 600; }
+.yaml-punctuation { color: #94a3b8; }
+.yaml-string { color: #34d399; }
+.yaml-number { color: #fbbf24; }
+.yaml-boolean { color: #a855f7; font-weight: 500; }
+
+.ss-ctrl-btn.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+}

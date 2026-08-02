@@ -1453,8 +1453,16 @@ async function openYamlViewer(ymlPath, index = 0) {
     let isResizing = false;
 
     const setYamlWidth = (width) => {
-        const nextWidth = Math.max(280, Math.min(560, width));
-        shell.style.setProperty('--yaml-width', `${nextWidth}px`);
+        const bodyWidth =
+            shell.querySelector('.caption-viewer-body').clientWidth;
+
+        const minWidth = 320;
+        const maxWidth = bodyWidth - 350;   // leave room for image
+
+        shell.style.setProperty(
+            '--yaml-width',
+            `${Math.max(minWidth, Math.min(maxWidth, width))}px`
+        );
     };
 
     const updateViewer = async () => {
@@ -1547,17 +1555,33 @@ function renderCaptionCard(item, index = 0) {
 }
 
 function highlightYaml(text) {
-    if (!text) return '';
+    return escapeHtml(text)
+        .split('\n')
+        .map(line => {
+            const m = line.match(/^(\s*)([^:#]+):(.*)$/);
 
-    const escaped = escapeHtml(text);
-    return escaped
-        .replace(/(^|[\s{[(,])([A-Za-z0-9_.-]+)(?=\s*:)/gm, '$1<span class="yaml-key">$2</span>')
-        .replace(/([{}[\],:])/g, '<span class="yaml-punctuation">$1</span>')
-        .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, '<span class="yaml-string">$1</span>')
-        .replace(/(^|[^\w.-])(true|false|null)(?=$|[^\w.-])/gi, '$1<span class="yaml-boolean">$2</span>')
-        .replace(/(^|[^\w.-])(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)(?=$|[^\w.-])/gi, '$1<span class="yaml-number">$2</span>')
-        .replace(/(^|\s)(#.*)$/gm, '$1<span class="yaml-comment">$2</span>')
-        .replace(/(:)\s*$/gm, '$1 <span class="yaml-empty"> </span>');
+            if (!m)
+                return line;
+
+            return `${m[1]}<span class="yaml-key">${m[2]}</span><span class="yaml-punctuation">:</span>${highlightYamlValue(m[3])}`;
+        })
+        .join('\n');
+}
+
+function highlightYamlValue(value) {
+    return value
+        .replace(
+            /"(.*?)"|'(.*?)'/g,
+            '<span class="yaml-string">$&</span>'
+        )
+        .replace(
+            /\b(true|false|null)\b/g,
+            '<span class="yaml-boolean">$1</span>'
+        )
+        .replace(
+            /\b-?\d+(\.\d+)?\b/g,
+            '<span class="yaml-number">$&</span>'
+        );
 }
 
 /* Helper functions for escaping HTML content securely */

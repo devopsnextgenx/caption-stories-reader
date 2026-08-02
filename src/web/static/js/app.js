@@ -1407,21 +1407,20 @@ async function openYamlViewer(ymlPath, index = 0) {
     const items = Array.isArray(window.captionGalleryItems) ? window.captionGalleryItems : [];
     if (!items.length) return;
 
-    const currentItem = items[Math.max(0, Math.min(index, items.length - 1))] || items[0];
     const overlay = document.createElement('div');
-    overlay.className = 'caption-viewer-overlay';
+    overlay.className = 'caption-viewer-overlay slideshow-overlay';
     overlay.innerHTML = `
         <div class="caption-viewer-shell">
-            <div class="caption-viewer-toolbar">
+            <div class="caption-viewer-toolbar ss-topbar">
                 <div class="caption-viewer-toolbar-title">
-                    <button class="caption-viewer-nav-btn" id="caption-viewer-prev" type="button">←</button>
+                    <button class="caption-viewer-nav-btn ss-ctrl-btn" id="caption-viewer-prev" type="button">←</button>
                     <div>
                         <div class="caption-viewer-title">Caption Viewer</div>
                         <div class="caption-viewer-subtitle" id="caption-viewer-title"></div>
                     </div>
-                    <button class="caption-viewer-nav-btn" id="caption-viewer-next" type="button">→</button>
+                    <button class="caption-viewer-nav-btn ss-ctrl-btn" id="caption-viewer-next" type="button">→</button>
                 </div>
-                <button class="caption-viewer-close" id="caption-viewer-close" type="button">✕</button>
+                <button class="caption-viewer-close ss-close-btn" id="caption-viewer-close" type="button">✕</button>
             </div>
             <div class="caption-viewer-body">
                 <div class="caption-viewer-image-pane">
@@ -1432,7 +1431,7 @@ async function openYamlViewer(ymlPath, index = 0) {
                 <div class="caption-viewer-divider" id="caption-viewer-divider"></div>
                 <div class="caption-viewer-yaml-pane">
                     <div class="caption-viewer-pane-header">YAML metadata</div>
-                    <pre class="caption-viewer-code" id="caption-viewer-code">Loading YAML…</pre>
+                    <pre class="caption-viewer-code yaml-syntax" id="caption-viewer-code">Loading YAML…</pre>
                 </div>
             </div>
         </div>
@@ -1451,20 +1450,28 @@ async function openYamlViewer(ymlPath, index = 0) {
     const nextBtn = overlay.querySelector('#caption-viewer-next');
     let activeIndex = items.findIndex((item) => item.yml_path === ymlPath || item.yml_file === ymlPath);
     activeIndex = activeIndex >= 0 ? activeIndex : Math.max(0, Math.min(index, items.length - 1));
+    let isResizing = false;
+
+    const setYamlWidth = (width) => {
+        const nextWidth = Math.max(280, Math.min(560, width));
+        shell.style.setProperty('--yaml-width', `${nextWidth}px`);
+    };
 
     const updateViewer = async () => {
         const item = items[activeIndex];
         if (!item) return;
         const imgUrl = resolveCaptionImageUrl(item);
-        titleEl.textContent = item.image_filename || item.image_path || item.yml_file || 'Caption';
+        const displayName = item.image_filename || item.image_path || item.yml_file || 'Caption';
+        titleEl.textContent = displayName;
         imageEl.src = imgUrl;
-        imageEl.alt = titleEl.textContent;
+        imageEl.alt = displayName;
         codeEl.textContent = 'Loading YAML…';
 
         try {
             const response = await fetch(`/api/captions/details?yml_path=${encodeURIComponent(item.yml_path || '')}`);
             const payload = await response.json();
-            codeEl.textContent = payload.yaml_text || JSON.stringify(payload.data || payload, null, 2);
+            const yamlText = payload.yaml_text || JSON.stringify(payload.data || payload, null, 2);
+            codeEl.innerHTML = highlightYaml(yamlText);
         } catch (err) {
             codeEl.textContent = `Unable to load YAML details.\n${err.message}`;
         }
@@ -1492,27 +1499,26 @@ async function openYamlViewer(ymlPath, index = 0) {
         }
     });
 
-    let isDragging = false;
     divider.addEventListener('pointerdown', (event) => {
-        isDragging = true;
+        event.preventDefault();
+        isResizing = true;
         divider.setPointerCapture(event.pointerId);
     });
 
-    divider.addEventListener('pointermove', (event) => {
-        if (!isDragging) return;
-        const rect = shell.getBoundingClientRect();
-        const width = Math.max(320, Math.min(rect.width - 320, rect.right - event.clientX));
-        shell.style.setProperty('--yaml-width', `${width}px`);
+    overlay.addEventListener('pointermove', (event) => {
+        if (!isResizing) return;
+        const bodyRect = shell.querySelector('.caption-viewer-body').getBoundingClientRect();
+        const dividerX = event.clientX - bodyRect.left;
+        const width = bodyRect.width - dividerX;
+        setYamlWidth(width);
     });
 
-    divider.addEventListener('pointerup', () => {
-        isDragging = false;
-    });
+    const stopResizing = () => {
+        isResizing = false;
+    };
 
-    divider.addEventListener('pointercancel', () => {
-        isDragging = false;
-    });
-
+    overlay.addEventListener('pointerup', stopResizing);
+    overlay.addEventListener('pointercancel', stopResizing);
     updateViewer();
 }
 
@@ -1538,6 +1544,20 @@ function renderCaptionCard(item, index = 0) {
             </div>
         </div>
     `;
+}
+
+function highlightYaml(text) {
+    if (!text) return '';
+
+    const escaped = escapeHtml(text);
+    return escaped
+        .replace(/(^|[\s{[(,])([A-Za-z0-9_.-]+)(?=\s*:)/gm, '$1<span class="yaml-key">$2</span>')
+        .replace(/([{}[\],:])/g, '<span class="yaml-punctuation">$1</span>')
+        .replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, '<span class="yaml-string">$1</span>')
+        .replace(/(^|[^\w.-])(true|false|null)(?=$|[^\w.-])/gi, '$1<span class="yaml-boolean">$2</span>')
+        .replace(/(^|[^\w.-])(-?\d+(?:\.\d+)?(?:e[+-]?\d+)?)(?=$|[^\w.-])/gi, '$1<span class="yaml-number">$2</span>')
+        .replace(/(^|\s)(#.*)$/gm, '$1<span class="yaml-comment">$2</span>')
+        .replace(/(:)\s*$/gm, '$1 <span class="yaml-empty"> </span>');
 }
 
 /* Helper functions for escaping HTML content securely */

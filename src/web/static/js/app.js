@@ -1390,10 +1390,136 @@ function bindGalleryCardActions() {
     });
 }
 
+function resolveCaptionImageUrl(item) {
+    if (!item) return '/static/placeholder.png';
+    if (item.image_url) return item.image_url;
+
+    const imagePath = item.image_path || item.image_filename || '';
+    if (!imagePath) return '/static/placeholder.png';
+
+    const normalized = String(imagePath).replace(/\\/g, '/').replace(/^\/+/, '');
+    return `/captions/${encodeURIComponent(normalized).replace(/%2F/g, '/')}`;
+}
+
+async function openYamlViewer(ymlPath, index = 0) {
+    if (!ymlPath) return;
+
+    const items = Array.isArray(window.captionGalleryItems) ? window.captionGalleryItems : [];
+    if (!items.length) return;
+
+    const currentItem = items[Math.max(0, Math.min(index, items.length - 1))] || items[0];
+    const overlay = document.createElement('div');
+    overlay.className = 'caption-viewer-overlay';
+    overlay.innerHTML = `
+        <div class="caption-viewer-shell">
+            <div class="caption-viewer-toolbar">
+                <div class="caption-viewer-toolbar-title">
+                    <button class="caption-viewer-nav-btn" id="caption-viewer-prev" type="button">←</button>
+                    <div>
+                        <div class="caption-viewer-title">Caption Viewer</div>
+                        <div class="caption-viewer-subtitle" id="caption-viewer-title"></div>
+                    </div>
+                    <button class="caption-viewer-nav-btn" id="caption-viewer-next" type="button">→</button>
+                </div>
+                <button class="caption-viewer-close" id="caption-viewer-close" type="button">✕</button>
+            </div>
+            <div class="caption-viewer-body">
+                <div class="caption-viewer-image-pane">
+                    <div class="caption-viewer-image-frame">
+                        <img id="caption-viewer-image" alt="Caption preview" class="caption-viewer-image" />
+                    </div>
+                </div>
+                <div class="caption-viewer-divider" id="caption-viewer-divider"></div>
+                <div class="caption-viewer-yaml-pane">
+                    <div class="caption-viewer-pane-header">YAML metadata</div>
+                    <pre class="caption-viewer-code" id="caption-viewer-code">Loading YAML…</pre>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+
+    const shell = overlay.querySelector('.caption-viewer-shell');
+    const imageEl = overlay.querySelector('#caption-viewer-image');
+    const titleEl = overlay.querySelector('#caption-viewer-title');
+    const codeEl = overlay.querySelector('#caption-viewer-code');
+    const divider = overlay.querySelector('#caption-viewer-divider');
+    const closeBtn = overlay.querySelector('#caption-viewer-close');
+    const prevBtn = overlay.querySelector('#caption-viewer-prev');
+    const nextBtn = overlay.querySelector('#caption-viewer-next');
+    let activeIndex = items.findIndex((item) => item.yml_path === ymlPath || item.yml_file === ymlPath);
+    activeIndex = activeIndex >= 0 ? activeIndex : Math.max(0, Math.min(index, items.length - 1));
+
+    const updateViewer = async () => {
+        const item = items[activeIndex];
+        if (!item) return;
+        const imgUrl = resolveCaptionImageUrl(item);
+        titleEl.textContent = item.image_filename || item.image_path || item.yml_file || 'Caption';
+        imageEl.src = imgUrl;
+        imageEl.alt = titleEl.textContent;
+        codeEl.textContent = 'Loading YAML…';
+
+        try {
+            const response = await fetch(`/api/captions/details?yml_path=${encodeURIComponent(item.yml_path || '')}`);
+            const payload = await response.json();
+            codeEl.textContent = payload.yaml_text || JSON.stringify(payload.data || payload, null, 2);
+        } catch (err) {
+            codeEl.textContent = `Unable to load YAML details.\n${err.message}`;
+        }
+    };
+
+    prevBtn.addEventListener('click', () => {
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+        updateViewer();
+    });
+
+    nextBtn.addEventListener('click', () => {
+        activeIndex = (activeIndex + 1) % items.length;
+        updateViewer();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        document.body.style.overflow = '';
+        overlay.remove();
+    });
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+            document.body.style.overflow = '';
+            overlay.remove();
+        }
+    });
+
+    let isDragging = false;
+    divider.addEventListener('pointerdown', (event) => {
+        isDragging = true;
+        divider.setPointerCapture(event.pointerId);
+    });
+
+    divider.addEventListener('pointermove', (event) => {
+        if (!isDragging) return;
+        const rect = shell.getBoundingClientRect();
+        const width = Math.max(320, Math.min(rect.width - 320, rect.right - event.clientX));
+        shell.style.setProperty('--yaml-width', `${width}px`);
+    });
+
+    divider.addEventListener('pointerup', () => {
+        isDragging = false;
+    });
+
+    divider.addEventListener('pointercancel', () => {
+        isDragging = false;
+    });
+
+    updateViewer();
+}
+
 function renderCaptionCard(item, index = 0) {
-    const name = item.image_name || 'Image';
-    const ymlPath = item.yaml_path || '';
-    const imgUrl = item.image_path ? `/captions/${encodeURIComponent(item.image_path).replace(/%2F/g, '/')}` : '/static/placeholder.png';
+    const name = item.image_name || item.image_filename || 'Image';
+    const ymlPath = item.yml_path || '';
+    const imgUrl = resolveCaptionImageUrl(item);
     const tags = Array.isArray(item.tags) ? item.tags : [];
     
     const tagHtml = tags.length > 0 

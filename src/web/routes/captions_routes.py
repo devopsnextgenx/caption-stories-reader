@@ -15,6 +15,36 @@ logger = logging.getLogger(__name__)
 active_jobs: Dict[str, Dict[str, Any]] = {}
 
 
+def _build_caption_image_url(image_path: Optional[str], captions_folder: Optional[str]) -> Optional[str]:
+    """Build a browser-served URL for an image stored under the captions root."""
+    if not image_path:
+        return None
+
+    candidate = str(image_path).strip()
+    if not candidate:
+        return None
+
+    filename = os.path.basename(candidate.replace("\\", "/"))
+    if not filename:
+        return None
+
+    if captions_folder:
+        try:
+            captions_root = os.path.abspath(captions_folder)
+            abs_candidate = os.path.abspath(candidate)
+            if os.path.commonpath([captions_root, abs_candidate]) == captions_root:
+                rel_path = os.path.relpath(abs_candidate, captions_root).replace("\\", "/")
+                return f"/captions/{rel_path}"
+
+            candidate_file = os.path.join(captions_root, filename)
+            if os.path.exists(candidate_file):
+                return f"/captions/{filename}"
+        except ValueError:
+            pass
+
+    return f"/captions/{filename}"
+
+
 @router.get("")
 def list_captions(request: Request) -> Dict[str, Any]:
     """List all processed caption metadata files in data folder."""
@@ -30,12 +60,14 @@ def list_captions(request: Request) -> Dict[str, Any]:
                     try:
                         with open(yml_path, "r", encoding="utf-8") as f:
                             data = yaml.safe_load(f) or {}
+                            image_path = data.get("image_path") or data.get("image_filename")
                             captions.append(
                                 {
                                     "yml_file": file,
                                     "yml_path": yml_path,
                                     "image_filename": data.get("image_filename"),
-                                    "image_path": data.get("image_path"),
+                                    "image_path": image_path,
+                                    "image_url": _build_caption_image_url(image_path, captions_folder),
                                     "primary_text": data.get("content", {}).get("primary_text", ""),
                                     "english_translation": data.get("content", {}).get("english_translation", ""),
                                     "scene": data.get("content", {}).get("scene", ""),
@@ -51,14 +83,19 @@ def list_captions(request: Request) -> Dict[str, Any]:
 
 @router.get("/details")
 def get_caption_details(yml_path: str) -> Dict[str, Any]:
-    """Get complete content of a caption YAML file."""
+    """Get the complete content of a caption YAML file for the viewer UI."""
     if not os.path.exists(yml_path):
         raise HTTPException(status_code=404, detail="Caption YAML file not found")
 
     try:
         with open(yml_path, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f) or {}
-            return data
+            raw_yaml = f.read()
+            data = yaml.safe_load(raw_yaml) or {}
+            return {
+                "data": data,
+                "yaml_text": raw_yaml,
+                "source_path": yml_path,
+            }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to read caption YAML: {e}")
 

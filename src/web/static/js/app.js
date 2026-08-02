@@ -1456,7 +1456,7 @@ async function openYamlViewer(ymlPath, index = 0) {
         const bodyWidth =
             shell.querySelector('.caption-viewer-body').clientWidth;
 
-        const minWidth = 320;
+        const minWidth = 400;
         const maxWidth = bodyWidth - 350;   // leave room for image
 
         shell.style.setProperty(

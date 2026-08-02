@@ -130,7 +130,7 @@ data:
   # Folder containing the XOS source catalog.
   xos_folder: "/media/data/xos"
   # Folder where caption images are uploaded and processed.
-  captions_folder: "/media/data/xos/actresses/Captions"
+  captions_folder: "data/captions"
   # Folder containing story-site assets or output data.
   stories_folder: "data/story-site"
   # Supported image formats for caption processing.

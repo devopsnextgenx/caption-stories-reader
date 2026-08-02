@@ -1651,7 +1651,7 @@ footer {
   background: transparent;
   box-shadow: none;
   overflow: hidden;
-  --yaml-width: 420px;
+  --yaml-width: 1080px;
 }
 
 .caption-viewer-toolbar {

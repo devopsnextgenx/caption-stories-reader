@@ -5,14 +5,17 @@
 FROM docker.io/nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
+        --allow-change-held-packages \
         software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y --no-install-recommends \
+        --allow-change-held-packages \
         python3.12 python3.12-venv python3.12-dev build-essential ca-certificates curl gcc
-
+        
 # Install uv instantly
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -59,8 +62,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update && apt-get install -y --no-install-recommends \
+        --allow-change-held-packages \
         python3.12 \
-        libgomp1 libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 tzdata
+        libgomp1 libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 tzdata \
+        libcudnn8 libcublas-11-8 libcurand-11-8
 
 # Setup non-root user with dynamic UID/GID
 ARG USER_UID=1000

@@ -1340,7 +1340,7 @@ function pollJobStatus(jobId, progressBar, progressStatus, progressCard) {
         } catch (err) {
             clearInterval(interval);
         }
-    }, 1000);
+    }, 5000);
 }
 
 async function loadCaptionsGallery() {

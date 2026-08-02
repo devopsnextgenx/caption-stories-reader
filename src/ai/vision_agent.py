@@ -2,6 +2,7 @@
 
 import os
 import logging
+import tempfile
 from typing import Dict, Any, Optional
 from PIL import Image
 
@@ -88,7 +89,12 @@ class VisionAgent:
             }
 
     def _prepare_image(self, image_path: str) -> str:
-        """Resize image if required by configuration before sending to Visual LLM."""
+        """Resize image if required by configuration before sending to Visual LLM.
+
+        Temp files are written to /tmp rather than alongside the source image
+        so this works regardless of whether the source directory is read-only,
+        owned by another user, or on a network mount.
+        """
         if not self.resize_spec.get("enabled", True):
             return image_path
 
@@ -100,7 +106,14 @@ class VisionAgent:
                     return image_path
 
                 img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
-                temp_path = f"{image_path}.vision_temp.jpg"
+
+                basename = os.path.basename(image_path)
+                fd, temp_path = tempfile.mkstemp(
+                    suffix=".jpg",
+                    prefix=f"vision_{basename}_",
+                    dir="/tmp",
+                )
+                os.close(fd)
                 img.convert("RGB").save(temp_path, "JPEG", quality=85)
                 return temp_path
         except Exception as e:

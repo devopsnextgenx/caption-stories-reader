@@ -52,22 +52,15 @@ services:
 
   caption-stories-reader:
     image: docker.io/amitkshirsagar13/caption-stories-reader:latest
+    restart: unless-stopped
     container_name: caption-stories-reader
-    user: "${UID}:${GID}"
-    ports:
-      - "8765:8765"
-    depends_on:
-      - redis
-      - mongodb
-      - mysql
-      - qdrant-primary
-    volumes:
-      - ./logs:/app/logs
-      - paddle-model-cache:/home/appuser/.paddlex
-      - /media/data/xos:/media/data/xos
-      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/captions:/media/data/captions
-      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/story-site:/media/data/story-site
+    # user: "${UID}:${GID}"
+    user: "0:0"
+    devices:
+      - nvidia.com/gpu=all             # ← CDI syntax for Podman
     environment:
+      - NVIDIA_VISIBLE_DEVICES=all                     # ← add
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility     # ← add
       - PADDLE_MODEL_CACHE_DIR=/home/appuser/.paddlex
       - XOS_FOLDER=/media/data/xos
       - CAPTIONS_FOLDER=/media/data/captions
@@ -78,8 +71,24 @@ services:
       # Ollama runs on the host machine; point container to host's Ollama endpoint.
       # On many systems `host.docker.internal` resolves to the host. Override as needed.
       - OLLAMA_HOST=http://host.docker.internal:11434
-    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    depends_on:
+      - redis
+      - mongodb
+      - mysql
+      - qdrant-primary
+    volumes:
+      - ./logs:/app/logs:U
+      - paddle-model-cache:/home/appuser/.paddlex:U
+      - /media/data/xos:/media/data/xos:U
+      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/captions:/media/data/captions:U
+      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/story-site:/media/data/story-site:U
 
 volumes:
   paddle-model-cache:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/shared/pixtor/docker-data/paddle-model-cache

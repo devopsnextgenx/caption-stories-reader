@@ -1,0 +1,8 @@
+build/
+logs/
+models/
+data/
+.venv/
+.pytest_cache/
+.mypy_cache/
+__pycache__/

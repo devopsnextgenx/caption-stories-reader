@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Caption Stories Reader</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-icon">⚙️</span>
+            <span>Caption Stories Reader</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/captions-studio" class="nav-link">Captions Studio</a>
+            <a href="/admin" class="nav-link active">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <div class="page-header">
+            <h1 class="page-title">Admin Dashboard</h1>
+            <p class="page-subtitle">Manage configuration parameters, monitor service health, and review application logs.</p>
+        </div>
+
+        <div class="grid-2">
+            <!-- Config Editor -->
+            <div class="card">
+                <div class="card-title">
+                    <span>Configuration Manager (config.yml)</span>
+                    <button id="save-config-btn" class="btn btn-primary" style="font-size: 0.85rem;">Save Changes</button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">System Settings JSON/YAML Structure</label>
+                    <textarea id="config-yaml-editor" class="form-control" style="min-height: 380px;"></textarea>
+                </div>
+                <div id="config-save-msg" style="font-weight: 500; font-size: 0.9rem;"></div>
+            </div>
+
+            <!-- System Logs -->
+            <div class="card">
+                <div class="card-title">
+                    <span>System Execution Logs</span>
+                </div>
+                <div id="system-logs-box" class="code-block" style="min-height: 410px; font-size: 0.8rem;">
+                    Loading logs...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

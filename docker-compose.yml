@@ -1,0 +1,84 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: pixtor-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /home/shared/pixtor/docker-data/redis:/data
+    restart: always
+
+  mongodb:
+    image: mongo:6-jammy
+    container_name: pixtor-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: pixtor
+    ports:
+      - "27017:27017"
+    volumes:
+      - /home/shared/pixtor/scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - /home/shared/pixtor/docker-data/mongodb:/data/db
+    restart: always
+
+  mysql:
+    image: mysql:8
+    container_name: pixtor-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - /home/shared/pixtor/scripts/mysql-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - /home/shared/pixtor/docker-data/mysql:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword" ]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    restart: always
+
+  qdrant-primary:
+    image: qdrant/qdrant:latest
+    container_name: pixtor-qdrant-primary
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - /home/shared/pixtor/docker-data/qdrant-primary:/qdrant/storage
+    restart: always
+
+  caption-stories-reader:
+    image: docker.io/amitkshirsagar13/caption-stories-reader:latest
+    container_name: caption-stories-reader
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - mongodb
+      - mysql
+      - qdrant-primary
+    volumes:
+      - ./logs:/app/logs
+      - paddle-model-cache:/home/appuser/.paddlex
+      - /media/data/xos:/media/data/xos
+      - /media/data/xos/actresses/Captions:/media/data/captions
+      - /media/zbox-home/admn/git/devopsnextgenx/story-site/data:/media/data/story-site
+    environment:
+      - PADDLE_MODEL_CACHE_DIR=/home/appuser/.paddlex
+      - XOS_FOLDER=/media/data/xos
+      - CAPTIONS_FOLDER=/media/data/captions
+      - STORIES_FOLDER=/media/data/story-site
+      - LOG_FILE=/app/logs/caption-stories-reader.log
+      - PERFORMANCE_LOG_LOCATION=/app/logs/performance
+      - CAPTION_CONFIG_PATH=/app/config.yml
+      # Ollama runs on the host machine; point container to host's Ollama endpoint.
+      # On many systems `host.docker.internal` resolves to the host. Override as needed.
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    restart: unless-stopped
+
+volumes:
+  paddle-model-cache:
+    driver: local

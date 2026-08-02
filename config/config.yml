@@ -1,0 +1,354 @@
+# ========================================
+# Caption Extractor Configuration
+# ========================================
+
+# Logging Configuration
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/caption-stories-reader.log"
+
+# Performance Logging Configuration
+performance_logging:
+  enabled: true  # Enable periodic performance statistics logging
+  log_location: "logs/performance"  # Directory to store performance logs
+  periodicity_seconds: 600  # Log interval in seconds (600 = 10 minutes)
+
+# API Configuration
+api:
+  port: 8989  # Port for FastAPI server
+  host: "0.0.0.0"  # Host address (0.0.0.0 = accessible from network)
+  reload: true  # Auto-reload on code changes (dev mode)
+  workers: 1  # Number of worker processes
+  log_level: "info"  # API log level: debug, info, warning, error, critical
+  
+  # Reload monitoring configuration (only applies when reload: true)
+  # Option 1: Specify directories to monitor (include only these)
+  reload_dirs: ["src"]
+  
+  # Option 2: Exclude specific directories/patterns from monitoring
+  reload_excludes: ["*.log", "logs/*", "models/*", "data/*", "__pycache__/*", "*.pyc"]
+  
+  # Examples:
+  # - Monitor only source code: reload_dirs: ["src"]
+  # - Exclude large folders: reload_excludes: ["models/*", "logs/*", "data/*", "images/*"]
+
+# ========================================
+# AI Agent Configuration
+# ========================================
+
+# Processing Pipeline Control
+pipeline:
+  # Enable/disable individual processing components
+  enable_ocr: true          # OCR text extraction using PaddleOCR
+  enable_image_agent: true  # Image analysis using visual LLM
+  enable_text_agent: true   # Text correction/completion using LLM
+  enable_translation: true # Run translator agent to translate primary_text to English when needed
+  # Image resize specification applied before sending images to image agent.
+  # Default keeps aspect ratio and scales images to fit within 1024x1024.
+  image_resize:
+    enabled: true
+    max_size: [1024, 1024]
+    keep_aspect: true
+    # interpolation: one of 'area', 'linear', 'cubic'
+    interpolation: "area"
+
+# Ollama Configuration
+ollama:
+  # Ollama server connection
+  host: "http://localhost:11434"  # Ollama API endpoint
+  timeout: 120  # Request timeout in seconds
+  
+  # Model configuration
+  models:
+    # Visual model for image analysis (image agent)
+    vision_model: "minicpm-v4.6:1b"  # Suggested: llava:latest, llava:13b, bakllava, qwen3-vl:4b, qwen3-vl:235b-cloud, ministral-3:latest
+    
+    # Text model for text processing (text agent)
+    text_model: "gemma4:e2b"  # Suggested: llama3.2:latest, mistral:latest, gemma2:latest
+  
+  # Image Agent Configuration
+  image_agent:
+    # Temperature for generation (0.0 = deterministic, 1.0 = creative)
+    temperature: 0.7
+    # Maximum tokens to generate
+    max_tokens: 1000
+    # System prompt for image analysis
+    system_prompt: |
+      You are an expert image analyst. Analyze the provided image and extract:
+      1. Description: A detailed description of what you see
+      2. Scene: The type of scene or setting (e.g., indoor, outdoor, document, etc.)
+      3. Text: Any visible text in the image
+      4. Story: A brief narrative or context about the image
+      Provide your response in a structured format.
+  
+  # Text Agent Configuration
+  text_agent:
+    # Temperature for generation (0.0 = deterministic, 1.0 = creative)
+    temperature: 0.3
+    # Maximum tokens to generate
+    max_tokens: 2000
+    # System prompt for text correction
+    system_prompt: |
+      You are an expert text correction assistant. Your task is to:
+      1. Review the OCR-extracted text and image analysis
+      2. Correct any OCR errors or inconsistencies
+      3. Complete incomplete words or sentences
+      4. Improve readability while maintaining the original meaning
+      5. Provide a corrected and polished version of the text
+      Return only the corrected text without additional commentary.
+
+  # Translator Agent Configuration
+  translator_agent:
+    # Model used for translation (if not set, text_model will be used)
+    model: null
+    # Temperature for generation (0.0 = deterministic)
+    temperature: 0.0
+    # Maximum tokens to generate for translation
+    max_tokens: 1500
+    # System prompt for the translator
+    system_prompt: |
+      You are a translation assistant. Translate the provided text into fluent, natural English. If the text is already English, return it unchanged. Return only the translated text.
+
+# PaddleOCR Model Configuration
+model:
+  # Model storage location
+  model_dir: "models"
+  # OCR detection model (PP-OCRv5) devanagari
+  det_model_name: "devanagari_PP-OCRv5_det"
+  # OCR recognition model (PP-OCRv5) devanagari
+  rec_model_name: "devanagari_PP-OCRv5_rec"
+  # Use angle classification
+  use_angle_cls: true
+  # Language support
+  lang: "devanagari"
+  # Use GPU if available (disabled for stability)
+  use_gpu: false
+
+# Data Configuration
+data:
+  # Folder containing the XOS source catalog.
+  xos_folder: "/media/data/xos"
+  # Folder where caption images are uploaded and processed.
+  captions_folder: "/media/data/xos/actresses/Captions"
+  # Folder containing story-site assets or output data.
+  stories_folder: "/media/zbox-home/admn/git/devopsnextgenx/story-site/data"
+  # Supported image formats for caption processing.
+  supported_formats: [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"]
+  # Supported formats for XOS browsing and album viewing.
+  xos_supported_formats: [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp", ".mp4"]
+  # Output YAML file will be saved in same folder as image
+
+# Processing Configuration
+processing:
+  # Number of threads for concurrent processing (disabled for PaddleOCR stability)
+  num_threads: 1
+  # Batch size for processing
+  batch_size: 10
+  # Show progress bar
+  show_progress: true
+  # Enable timing for each image
+  enable_timing: true
+
+# Batch processing options (step-based processing is LLM/agent friendly)
+batch_processing:
+  # Mode controls how batches are executed. Use 'image' for per-image
+  # processing (default). Use 'step' to process all images through each
+  # pipeline step in sequence (better for local LLMs / agents).
+  mode: "step"            # 'image' or 'step'
+  # Number of threads to use when processing a single step across the
+  # whole batch. If not set, the CLI --threads overrides this at runtime.
+  num_threads_per_step: 4
+  # Show per-step progress bars (requires tqdm)
+  show_progress: true
+
+# Performance Configuration
+performance:
+  # Maximum image size (width, height) for processing
+  max_image_size: [2048, 2048]
+  # Resize images if they exceed max size
+  auto_resize: true
+  # Image quality for resizing (1-100)
+  resize_quality: 85
+
+# ========================================
+# Enhanced OCR Configuration
+# ========================================
+
+# OCR Engine Configuration
+ocr:
+  # Basic settings
+  lang: "en"  # Language code (en, hi, mr, te, ta, kn, ml, etc.)
+  use_gpu: false  # Enable GPU acceleration (requires paddlepaddle-gpu)
+  use_angle_cls: true  # Enable text angle classification (improves accuracy for rotated text)
+  show_log: false  # Show detailed PaddleOCR logs
+  model_dir: null  # Custom model directory path (optional)
+  
+  # Model cache directory (where PaddleOCR downloads and stores models)
+  # If not specified, defaults to ~/.paddleocr
+  # Using a local path gives better control and portability
+  model_cache_dir: "models/.paddleocr"  # Local cache directory for PaddleOCR models
+  
+  # Minimum confidence threshold for text recognition (0.0 - 1.0)
+  # Higher values = more strict, fewer false positives
+  min_confidence: 0.5
+  
+  # Detection Parameters (Text Detection Stage)
+  detection:
+    # Detection threshold for binarization (0.0 - 1.0)
+    # Lower = detect more text regions (more sensitive)
+    # Higher = detect only clear text regions (more precise)
+    det_db_thresh: 0.3
+    
+    # Box threshold for filtering detected regions (0.0 - 1.0)
+    # Higher = stricter filtering of detected boxes
+    det_db_box_thresh: 0.5
+    
+    # Unclip ratio for text region expansion (1.0 - 2.0)
+    # Higher = larger text boxes (useful for touching characters)
+    det_db_unclip_ratio: 1.6
+    
+    # Use dilation on detection mask (improves detection of small text)
+    use_dilation: true
+    
+    # Score mode: 'fast' or 'slow'
+    # 'fast' = faster but may miss some text
+    # 'slow' = more accurate but slower
+    det_db_score_mode: "fast"
+  
+  # Recognition Parameters (Text Recognition Stage)
+  recognition:
+    # Batch size for recognition (higher = faster on GPU, may use more memory)
+    rec_batch_num: 6
+    
+    # Maximum text length for recognition
+    max_text_length: 25
+    
+    # Recognition algorithm (default: CRNN)
+    # Options: CRNN, RARE, SRN, NRTR, SAR, SEED, SVTR, ViTSTR, ABINet, etc.
+    rec_algorithm: "CRNN"
+  
+  # Classification Parameters (Angle Classification Stage)
+  classification:
+    # Batch size for angle classification
+    cls_batch_num: 6
+    
+    # Classification threshold (0.0 - 1.0)
+    # Text with rotation confidence above this will be rotated
+    cls_thresh: 0.9
+
+# Image Preprocessing Configuration
+preprocessing:
+  # Automatic resize for large images
+  auto_resize: true
+  max_image_size: [2048, 2048]  # [width, height] in pixels
+  
+  # Convert to grayscale (can improve accuracy for black/white documents)
+  # WARNING: Disable if combined with adaptive_threshold to prevent empty images
+  grayscale: false
+  
+  # Brightness adjustment (0.5 = darker, 1.0 = normal, 1.5 = brighter)
+  brightness: 1.0
+  
+  # Contrast adjustment (0.5 = lower, 1.0 = normal, 2.0 = higher)
+  contrast: 1.0
+  
+  # Sharpening (improves edge detection)
+  sharpen: false
+  sharpen_strength: 1.0  # Higher = more sharpening (0.5 - 2.0)
+  
+  # Denoise (removes image noise/grain)
+  denoise: false
+  denoise_strength: 10  # Higher = more denoising (5 - 30)
+  
+  # Adaptive thresholding (converts to binary black/white)
+  # Very effective for poor quality scans or photos
+  # WARNING: Can cause issues if image preprocessing produces invalid images
+  adaptive_threshold: false
+  threshold_block_size: 11  # Must be odd number (3, 5, 7, 9, 11, etc.)
+  threshold_c: 2  # Constant subtracted from mean
+  
+  # Deskew image (corrects rotation)
+  deskew: false
+  
+  # Remove borders/margins
+  remove_borders: false
+  border_size: 10  # Pixels to remove from each side
+
+# Post-processing Configuration
+post_processing:
+  # Minimum text length to keep (filters out noise)
+  min_text_length: 1
+  
+  # Remove special characters
+  remove_special_chars: false
+  # Characters to keep if remove_special_chars is true
+  allowed_chars: ".,!?-:;()[]{}'\""
+  
+  # Strip leading/trailing whitespace
+  strip_whitespace: true
+  
+  # Convert all text to lowercase
+  lowercase: false
+  
+  # Remove duplicate text entries
+  remove_duplicates: false
+
+# Output Formatting Configuration
+formatting:
+  # Separator between text lines when combining into full_text
+  line_separator: " "  # Options: ' ', '\n', ', ', etc.
+
+# ========================================
+# Preset Configurations for Common Use Cases
+# ========================================
+
+# For high-quality scans:
+# - Keep default settings
+# - Consider: min_confidence: 0.6, det_db_thresh: 0.3
+
+# For photos/mobile camera images:
+# - Enable: sharpen: true, denoise: true
+# - Adjust: brightness and contrast as needed
+# - Consider: adaptive_threshold: true
+
+# For poor quality/low resolution:
+# - Lower: det_db_thresh: 0.2, min_confidence: 0.4
+# - Enable: sharpen: true, denoise: true
+# - Increase: det_db_unclip_ratio: 1.8
+
+# For documents with small text:
+# - Enable: use_dilation: true
+# - Increase: det_db_unclip_ratio: 1.8
+# - Enable: sharpen: true
+
+# For rotated/skewed documents:
+# - Enable: use_angle_cls: true, deskew: true
+# - Set: cls_thresh: 0.9
+
+# For documents with colored backgrounds:
+# - Enable: adaptive_threshold: true
+# - Adjust: brightness and contrast
+
+# For forms/structured documents:
+# - Enable: remove_borders: true
+# - Set: min_text_length: 2 (to filter field markers)
+
+# Performance optimization:
+# - Reduce: max_image_size for faster processing
+# - Reduce: rec_batch_num if memory constrained
+# - Disable: use_angle_cls if documents are always upright
+
+# ========================================
+# Vector Database (Qdrant) Configuration
+# ========================================
+qdrant:
+  enabled: true
+  host: "localhost"
+  port: 6333
+  url: null              # Set if using Qdrant Cloud or custom URL
+  api_key: null          # Set if API key authentication is required
+  collection_name: "captions_index"
+  vector_size: 768       # Dimension of embeddings (e.g. 768, 1536, 384)
+  distance: "Cosine"     # Cosine, Dot, Euclidean
+  on_disk: false

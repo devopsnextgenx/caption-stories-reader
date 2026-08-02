@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Caption Stories Reader</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-icon">📚</span>
+            <span>Caption Stories Reader</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link active">Dashboard</a>
+            <a href="/captions-studio" class="nav-link">Captions Studio</a>
+            <a href="/admin" class="nav-link">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <div class="page-header">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h1 class="page-title">Caption Stories Platform</h1>
+                    <p class="page-subtitle">AI-powered OCR text extraction, visual scene analysis, and vector indexing studio.</p>
+                </div>
+                <div id="system-status-badge" class="badge badge-amber">Checking System...</div>
+            </div>
+        </div>
+
+        <div class="grid-4" style="margin-bottom: 2rem;">
+            <div class="stat-box">
+                <div class="stat-label">Total Images</div>
+                <div class="stat-value" id="total-images-count">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Processed YAMLs</div>
+                <div class="stat-value" id="processed-yamls-count">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Visual LLM (Ollama)</div>
+                <div class="stat-value" id="ollama-status">-</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Vector Database</div>
+                <div class="stat-value" id="qdrant-status">-</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>Recent Extracted Captions</span>
+                <a href="/captions-studio" class="btn btn-secondary" style="font-size: 0.8rem;">Open Studio</a>
+            </div>
+            <div id="dashboard-gallery" class="gallery-grid">
+                <!-- Gallery cards injected by JS -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

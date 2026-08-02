@@ -62,8 +62,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         python3.12 \
         libgomp1 libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 tzdata
 
-# Setup non-root user
-RUN useradd -m appuser \
+# Setup non-root user with dynamic UID/GID
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN groupadd --gid $USER_GID appuser || true \
+    && useradd --uid $USER_UID --gid $USER_GID -m appuser \
     && mkdir -p /app /app/logs /home/appuser/.paddlex \
     && chown -R appuser:appuser /app /home/appuser
 

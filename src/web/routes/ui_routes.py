@@ -27,3 +27,15 @@ def admin_page(request: Request):
 def captions_studio_page(request: Request):
     """Caption Extraction & Processing Studio page."""
     return templates.TemplateResponse(request, "captions.html", {"page": "captions"})
+
+
+@router.get("/browse/captions", response_class=HTMLResponse)
+def browse_captions_page(request: Request):
+    """Browse captions folder page."""
+    return templates.TemplateResponse(request, "browse.html", {"page": "browse", "browse": "captions"})
+
+
+@router.get("/browse/xos", response_class=HTMLResponse)
+def browse_xos_page(request: Request):
+    """Browse XOS folder page."""
+    return templates.TemplateResponse(request, "browse.html", {"page": "browse", "browse": "xos"})

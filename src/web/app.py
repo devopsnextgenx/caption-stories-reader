@@ -57,15 +57,18 @@ def create_app(config_path: str = "config/config.yml") -> FastAPI:
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
     captions_folder = config_manager.get_captions_folder()
-    if os.path.exists(captions_folder):
+    if captions_folder:
+        os.makedirs(captions_folder, exist_ok=True)
         app.mount("/captions", StaticFiles(directory=captions_folder), name="captions")
 
     xos_folder = config_manager.get_xos_folder()
-    if os.path.exists(xos_folder):
+    if xos_folder:
+        os.makedirs(xos_folder, exist_ok=True)
         app.mount("/xos", StaticFiles(directory=xos_folder), name="xos")
 
     stories_folder = config_manager.get_stories_folder()
-    if os.path.exists(stories_folder):
+    if stories_folder:
+        os.makedirs(stories_folder, exist_ok=True)
         app.mount("/stories", StaticFiles(directory=stories_folder), name="stories")
 
     # Include APIRouters

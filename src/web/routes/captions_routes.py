@@ -82,7 +82,7 @@ def list_xos_folder(request: Request, path: Optional[str] = None) -> Dict[str, A
     """List directories and supported files inside the XOS root folder."""
     config_manager = request.app.state.config_manager
     xos_root = os.path.abspath(config_manager.get_xos_folder())
-    requested_path = os.path.abspath(os.path.join(xos_root, path or ""))
+    requested_path = os.path.abspath(os.path.join(xos_root, path or "")) if not (path and os.path.isabs(path)) else os.path.abspath(path)
 
     if not requested_path.startswith(xos_root):
         raise HTTPException(status_code=400, detail="Path outside of XOS root is not allowed")
@@ -123,9 +123,72 @@ def list_xos_folder(request: Request, path: Optional[str] = None) -> Dict[str, A
         if parent == '.':
             parent = ''
 
+    relative_path = os.path.relpath(requested_path, xos_root).replace('\\', '/')
+    if relative_path == ".":
+        relative_path = ""
+
     return {
         "root": xos_root,
-        "path": path or "",
+        "path": relative_path,
+        "parent": parent,
+        "directories": dir_entries,
+        "files": file_entries,
+    }
+
+
+@router.get("/folder/list")
+def list_captions_folder(request: Request, path: Optional[str] = None) -> Dict[str, Any]:
+    """List directories and supported files inside the captions root folder."""
+    config_manager = request.app.state.config_manager
+    captions_root = os.path.abspath(config_manager.get_captions_folder())
+    requested_path = os.path.abspath(os.path.join(captions_root, path or "")) if not (path and os.path.isabs(path)) else os.path.abspath(path)
+
+    if not requested_path.startswith(captions_root):
+        raise HTTPException(status_code=400, detail="Path outside of Captions root is not allowed")
+
+    if not os.path.exists(requested_path):
+        raise HTTPException(status_code=404, detail=f"Path not found: {requested_path}")
+
+    if not os.path.isdir(requested_path):
+        raise HTTPException(status_code=400, detail="Requested path must be a directory")
+
+    supported = config_manager.get_supported_formats() + config_manager.get_xos_supported_formats()
+    file_entries: List[Dict[str, Any]] = []
+    dir_entries: List[Dict[str, Any]] = []
+
+    for item in sorted(os.listdir(requested_path), key=lambda x: x.lower()):
+        full_path = os.path.join(requested_path, item)
+        rel_path = os.path.relpath(full_path, captions_root)
+        if os.path.isdir(full_path):
+            dir_entries.append({
+                "type": "directory",
+                "name": item,
+                "path": rel_path.replace('\\', '/'),
+            })
+        else:
+            ext = os.path.splitext(item)[1].lower()
+            if ext in supported:
+                file_entries.append({
+                    "type": "file",
+                    "name": item,
+                    "path": rel_path.replace('\\', '/'),
+                    "extension": ext,
+                    "size_bytes": os.path.getsize(full_path),
+                })
+
+    parent = None
+    if requested_path != captions_root:
+        parent = os.path.relpath(os.path.dirname(requested_path), captions_root).replace('\\', '/')
+        if parent == '.':
+            parent = ''
+
+    relative_path = os.path.relpath(requested_path, captions_root).replace('\\', '/')
+    if relative_path == ".":
+        relative_path = ""
+
+    return {
+        "root": captions_root,
+        "path": relative_path,
         "parent": parent,
         "directories": dir_entries,
         "files": file_entries,
@@ -185,7 +248,11 @@ async def upload_image(request: Request, file: UploadFile = File(...)) -> Dict[s
     captions_folder = config_manager.get_captions_folder()
     os.makedirs(captions_folder, exist_ok=True)
 
-    dest_path = os.path.join(captions_folder, file.filename)
+    if not os.access(captions_folder, os.W_OK):
+        raise HTTPException(status_code=500, detail=f"Captions folder is not writable: {captions_folder}")
+
+    safe_filename = os.path.basename(file.filename)
+    dest_path = os.path.join(captions_folder, safe_filename)
     try:
         with open(dest_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)

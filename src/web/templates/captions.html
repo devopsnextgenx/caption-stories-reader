@@ -14,28 +14,27 @@
             <span>Caption Stories Reader</span>
         </div>
         <nav class="nav-links">
-            <a href="/" class="nav-link">Dashboard</a>
-            <a href="/captions-studio" class="nav-link active">Captions Studio</a>
-            <a href="/admin" class="nav-link">Admin Dashboard</a>
+            <a href="/" class="nav-link" data-page="dashboard">Dashboard</a>
+            <a href="/captions-studio" class="nav-link" data-page="studio">Captions Studio</a>
+            <a href="/browse/captions" class="nav-link" data-page="browse-captions">Browse Captions</a>
+            <a href="/browse/xos" class="nav-link" data-page="browse-xos">Browse XOS</a>
+            <a href="/admin" class="nav-link" data-page="admin">Admin Dashboard</a>
         </nav>
     </header>
 
-    <main class="main-container">
-        <div class="page-header">
-            <h1 class="page-title">Captions Studio</h1>
-            <p class="page-subtitle">Upload caption images, run assembly-line pipeline extraction, and explore structured YAML results.</p>
-        </div>
-
+    <main>
+        <div class="page-subtitle">Upload caption images, run assembly-line pipeline extraction, and explore structured YAML results.</div>
         <div class="grid-2" style="margin-bottom: 2rem;">
             <!-- Upload Card -->
             <div class="card">
                 <div class="card-title">Single Image Upload & Extraction</div>
-                <div id="file-upload-area" class="dropzone">
+                <label id="file-upload-area" class="dropzone" for="image-file-input">
                     <div class="dropzone-icon">📤</div>
                     <div style="font-weight: 600; margin-bottom: 0.5rem;">Click or Drag Image Here to Process</div>
                     <div style="font-size: 0.85rem; color: var(--text-muted);">Supports .jpg, .png, .webp, .bmp</div>
-                    <input type="file" id="image-file-input" style="display: none;" accept="image/*">
-                </div>
+                    <input type="file" id="image-file-input" hidden accept="image/*">
+                </label>
+
                 <div id="upload-status" style="margin-top: 1rem; font-size: 0.9rem; font-weight: 500; color: #818cf8;"></div>
 
                 <div id="upload-preview-wrap" style="display: none; margin-top: 1.25rem;">
@@ -71,50 +70,12 @@
             </div>
         </div>
 
-        <div class="card" style="margin-bottom: 2rem;">
-            <div class="card-title" style="justify-content: space-between; align-items: center;">
-                <span>XOS Browser</span>
-                <div class="tab-controls">
-                    <button id="captions-tab-btn" class="btn btn-secondary active">Captions</button>
-                    <button id="xos-tab-btn" class="btn btn-secondary">XOS</button>
-                </div>
-            </div>
-            <div id="captions-pane">
-                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
-                    Use the Captions tab to manage image uploads, batch processing, and YAML extraction results.
-                </p>
-            </div>
-            <div id="xos-browser-pane" class="hidden">
-                <div class="xos-browser-header">
-                    <div>
-                        <h2 class="xos-browser-title">Browse XOS Folders</h2>
-                        <div id="xos-current-path" class="xos-current-path">/</div>
-                    </div>
-                    <div class="xos-browser-actions">
-                        <button id="xos-refresh-btn" class="btn btn-outline-primary btn-sm">Refresh</button>
-                    </div>
-                </div>
-                <div id="xos-breadcrumb" class="xos-breadcrumb"></div>
-                <div id="xos-browser-grid" class="gallery-grid" style="min-height: 220px; margin-top: 1rem;"></div>
-                <div id="xos-album-view" class="xos-album-view hidden">
-                    <div class="xos-album-header">
-                        <div>
-                            <div class="xos-album-label">Album Preview</div>
-                            <div id="xos-album-title" class="xos-album-title"></div>
-                        </div>
-                    </div>
-                    <div id="xos-album-content" class="xos-album-content"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Captions Gallery -->
         <div class="card">
-            <div class="card-title">
-                <span>Extracted Captions & Metadata</span>
-            </div>
-            <div id="captions-studio-gallery" class="gallery-grid">
-                <!-- Injected via JS -->
+            <div class="card-title">Processed Captions</div>
+            <div id="captions-studio-gallery" class="gallery-grid" style="min-height: 240px; margin-top: 1rem;">
+                <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Upload an image above or run the batch processor to generate caption YAML results.
+                </div>
             </div>
         </div>
     </main>

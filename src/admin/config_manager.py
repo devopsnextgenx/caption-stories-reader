@@ -1,6 +1,7 @@
 """Configuration management for Caption Stories Reader."""
 
 import os
+import sys
 import yaml
 import logging
 from pathlib import Path
@@ -97,15 +98,33 @@ class ConfigManager:
         log_file = self.get_log_file()
         log_dir = os.path.dirname(log_file)
         if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
+            try:
+                os.makedirs(log_dir, exist_ok=True)
+            except OSError as exc:
+                print(
+                    f"[WARNING] Could not create log directory {log_dir}: {exc}",
+                    file=sys.stderr,
+                )
 
         legacy_log_file = os.path.join(os.path.dirname(log_file) or ".", "caption-stories-reader.log")
         if log_file != legacy_log_file:
-            os.makedirs(os.path.dirname(legacy_log_file) or ".", exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(legacy_log_file) or ".", exist_ok=True)
+            except OSError as exc:
+                print(
+                    f"[WARNING] Could not create legacy log directory {os.path.dirname(legacy_log_file)}: {exc}",
+                    file=sys.stderr,
+                )
 
         perf_dir = self.get_performance_log_location()
         if perf_dir:
-            os.makedirs(perf_dir, exist_ok=True)
+            try:
+                os.makedirs(perf_dir, exist_ok=True)
+            except OSError as exc:
+                print(
+                    f"[WARNING] Could not create performance log directory {perf_dir}: {exc}",
+                    file=sys.stderr,
+                )
 
     def setup_logging(self) -> None:
         """Configure Python root logger with handlers based on config settings."""
@@ -119,12 +138,24 @@ class ConfigManager:
         if log_file:
             log_dir = os.path.dirname(log_file)
             if log_dir:
-                os.makedirs(log_dir, exist_ok=True)
+                try:
+                    os.makedirs(log_dir, exist_ok=True)
+                except OSError as exc:
+                    print(
+                        f"[WARNING] Could not create log directory {log_dir}: {exc}",
+                        file=sys.stderr,
+                    )
 
         legacy_log_file = os.path.join(os.path.dirname(log_file) or ".", "caption-stories-reader.log")
         if log_file != legacy_log_file:
-            os.makedirs(os.path.dirname(legacy_log_file) or ".", exist_ok=True)
-            Path(legacy_log_file).touch(exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(legacy_log_file) or ".", exist_ok=True)
+                Path(legacy_log_file).touch(exist_ok=True)
+            except OSError as exc:
+                print(
+                    f"[WARNING] Could not prepare legacy log file {legacy_log_file}: {exc}",
+                    file=sys.stderr,
+                )
 
         root_logger = logging.getLogger()
         root_logger.setLevel(log_level)
@@ -139,10 +170,17 @@ class ConfigManager:
                 break
 
         if not has_file_handler and log_file:
-            file_handler = logging.FileHandler(log_file, encoding="utf-8")
-            file_handler.setLevel(log_level)
-            file_handler.setFormatter(formatter)
-            root_logger.addHandler(file_handler)
+            try:
+                file_handler = logging.FileHandler(log_file, encoding="utf-8")
+            except OSError as exc:
+                print(
+                    f"[WARNING] Unable to open log file '{log_file}' for writing: {exc}. Falling back to console logging.",
+                    file=sys.stderr,
+                )
+            else:
+                file_handler.setLevel(log_level)
+                file_handler.setFormatter(formatter)
+                root_logger.addHandler(file_handler)
 
         has_console_handler = any(
             isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)

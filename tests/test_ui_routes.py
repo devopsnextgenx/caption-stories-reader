@@ -9,7 +9,7 @@ def test_ui_pages_render_successfully():
     app = create_app("config/config.yml")
     client = TestClient(app)
 
-    for path in ["/", "/admin", "/captions-studio"]:
+    for path in ["/", "/admin", "/captions-studio", "/browse/captions", "/browse/xos"]:
         response = client.get(path)
         assert response.status_code == 200, f"Expected page {path} to render successfully"
         assert "text/html" in response.headers["content-type"]

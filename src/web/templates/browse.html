@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse - Caption Stories Reader</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-icon">🖼️</span>
+            <span>Caption Stories Reader</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link" data-page="dashboard">Dashboard</a>
+            <a href="/captions-studio" class="nav-link" data-page="studio">Captions Studio</a>
+            <a href="/browse/captions" class="nav-link" data-page="browse-captions">Browse Captions</a>
+            <a href="/browse/xos" class="nav-link" data-page="browse-xos">Browse XOS</a>
+            <a href="/admin" class="nav-link" data-page="admin">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="main-container">
+        <div class="page-header">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1 class="page-title">Browse Captions &amp; XOS</h1>
+                    <p class="page-subtitle">Explore caption folders and XOS folders with responsive thumbnail tiles and quick previews.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card browse-card">
+
+            <!-- ── Top toolbar ── -->
+            <div class="browser-toolbar">
+                <!-- Left: title + selection toggle -->
+                <div class="browser-toolbar-left">
+                    <span class="browser-toolbar-title">Browse Folders</span>
+                    <label class="selection-mode-toggle" title="Toggle selection mode">
+                        <input type="checkbox" id="selection-mode-checkbox" />
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="selection-mode-label">Selection Mode</span>
+                    </label>
+                </div>
+
+                <!-- Right: search + controls -->
+                <div class="browser-toolbar-right">
+                    <div class="browser-search-wrap">
+                        <span class="browser-search-icon">🔍</span>
+                        <input id="browser-search-input" type="text" class="browser-search-input" placeholder="Search…" />
+                        <kbd class="browser-search-kbd">Ctrl+Shift+F</kbd>
+                    </div>
+
+                    <div class="browser-tab-group">
+                        <button id="captions-tab-btn" class="browser-tab-btn">Captions</button>
+                        <button id="xos-tab-btn" class="browser-tab-btn">XOS</button>
+                    </div>
+
+                    <div class="browser-control-group">
+                        <span class="browser-control-label">Sort:</span>
+                        <select class="browser-select" id="browser-sort-field">
+                            <option value="name">Name</option>
+                            <option value="size">Size</option>
+                            <option value="date">Date</option>
+                        </select>
+                        <select class="browser-select" id="browser-sort-dir">
+                            <option value="asc">ASC</option>
+                            <option value="desc">DESC</option>
+                        </select>
+                    </div>
+
+                    <div class="browser-control-group">
+                        <span class="browser-control-label">Size:</span>
+                        <select id="captions-size-select" class="browser-select" style="display:none;">
+                            <option value="64">64px</option>
+                            <option value="128" selected>128px</option>
+                            <option value="256">256px</option>
+                        </select>
+                        <select id="xos-size-select" class="browser-select" style="display:none;">
+                            <option value="64">64px</option>
+                            <option value="128" selected>128px</option>
+                            <option value="256">256px</option>
+                        </select>
+                        <select id="active-size-select" class="browser-select">
+                            <option value="64">64px</option>
+                            <option value="128" selected>128px</option>
+                            <option value="256">256px</option>
+                        </select>
+                    </div>
+
+                    <button id="captions-refresh-btn" class="btn btn-outline-primary btn-sm" style="display:none;">↺</button>
+                    <button id="xos-refresh-btn" class="btn btn-outline-primary btn-sm" style="display:none;">↺</button>
+                    <button id="active-refresh-btn" class="btn btn-outline-primary btn-sm" title="Refresh">↺ Refresh</button>
+                </div>
+            </div>
+
+            <!-- ── Breadcrumb bar ── -->
+            <div class="browser-breadcrumb-bar">
+                <div id="captions-breadcrumb" class="xos-breadcrumb"></div>
+                <div id="xos-breadcrumb" class="xos-breadcrumb hidden"></div>
+            </div>
+
+            <!-- ── Captions pane ── -->
+            <div id="captions-pane">
+                <div id="captions-current-path" class="xos-current-path hidden"></div>
+                <div id="captions-browser-grid" class="browser-tile-grid" style="min-height: 220px;"></div>
+                <div id="captions-album-view" class="xos-album-view hidden">
+                    <div class="xos-album-header">
+                        <div>
+                            <div class="xos-album-label">Folder Album</div>
+                            <div id="captions-album-title" class="xos-album-title"></div>
+                        </div>
+                        <div class="album-header-actions">
+                            <button class="btn btn-secondary btn-sm" id="captions-upload-btn">⬆ Upload Files</button>
+                            <button class="btn btn-secondary btn-sm" id="captions-upload-folder-btn">📁 Upload Folder</button>
+                            <button class="btn btn-secondary btn-sm" id="captions-close-album-btn">✕ Close Album</button>
+                        </div>
+                    </div>
+                    <div id="captions-album-content" class="xos-album-content"></div>
+                </div>
+            </div>
+
+            <!-- ── XOS pane ── -->
+            <div id="xos-browser-pane" class="hidden">
+                <div id="xos-current-path" class="xos-current-path hidden"></div>
+                <div id="xos-browser-grid" class="browser-tile-grid" style="min-height: 220px;"></div>
+                <div id="xos-album-view" class="xos-album-view hidden">
+                    <div class="xos-album-header">
+                        <div>
+                            <div class="xos-album-label">Folder Album</div>
+                            <div id="xos-album-title" class="xos-album-title"></div>
+                        </div>
+                        <div class="album-header-actions">
+                            <button class="btn btn-secondary btn-sm" id="xos-upload-btn">⬆ Upload Files</button>
+                            <button class="btn btn-secondary btn-sm" id="xos-upload-folder-btn">📁 Upload Folder</button>
+                            <button class="btn btn-secondary btn-sm" id="xos-close-album-btn">✕ Close Album</button>
+                        </div>
+                    </div>
+                    <div id="xos-album-content" class="xos-album-content"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer>
+        Caption Stories Reader © 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

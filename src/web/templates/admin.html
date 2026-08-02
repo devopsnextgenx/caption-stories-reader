@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Caption Stories Reader</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .main-container {
+            max-width: 90vw !important;
+        }
+        .admin-grid-2 {
+            width: 100% !important;
+        }
+        .admin-card {
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
 
@@ -29,9 +40,9 @@
             <p class="page-subtitle">Manage configuration parameters, monitor service health, and review application logs.</p>
         </div>
 
-        <div class="grid-2">
+        <div class="admin-grid-2">
             <!-- Config Editor -->
-            <div class="card">
+            <div class="admin-card">
                 <div class="card-title">
                     <span>Configuration Manager (config.yml)</span>
                     <button id="save-config-btn" class="btn btn-primary" style="font-size: 0.85rem;">Save Changes</button>
@@ -44,7 +55,7 @@
             </div>
 
             <!-- System Logs -->
-            <div class="card">
+            <div class="admin-card">
                 <div class="card-title">
                     <span>System Execution Logs</span>
                 </div>

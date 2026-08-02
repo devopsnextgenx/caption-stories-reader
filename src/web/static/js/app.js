@@ -928,6 +928,12 @@ function handleTileAction(action, path, type, tile) {
         overlay: null,
     };
 
+    // Document-level fallback so arrow/Escape keys work even when overlay loses focus
+    document.addEventListener('keydown', function (e) {
+        if (!ss.overlay) return;
+        handleKey(e);
+    });
+
     window.openSlideshow = function (paths, startIndex, browserType) {
         if (!paths || !paths.length) return;
         ss.paths       = paths;
@@ -1527,6 +1533,43 @@ async function openYamlViewer(ymlPath, index = 0) {
 
     overlay.addEventListener('pointerup', stopResizing);
     overlay.addEventListener('pointercancel', stopResizing);
+
+    // Keyboard navigation: arrows to change image, Escape to close
+    function handleViewerKey(e) {
+        if (!overlay.isConnected) return;
+        switch (e.key) {
+            case 'ArrowRight':
+            case 'ArrowDown':
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % items.length;
+                updateViewer();
+                break;
+            case 'ArrowLeft':
+            case 'ArrowUp':
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + items.length) % items.length;
+                updateViewer();
+                break;
+            case 'Escape':
+                e.preventDefault();
+                document.body.style.overflow = '';
+                overlay.remove();
+                document.removeEventListener('keydown', handleViewerKey);
+                break;
+        }
+    }
+    document.addEventListener('keydown', handleViewerKey);
+
+    // Clean up key listener when overlay is closed via button or backdrop click
+    closeBtn.addEventListener('click', () => {
+        document.removeEventListener('keydown', handleViewerKey);
+    });
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+            document.removeEventListener('keydown', handleViewerKey);
+        }
+    }, { once: true });
+
     updateViewer();
 }
 

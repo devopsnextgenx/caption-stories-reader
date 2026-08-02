@@ -1187,7 +1187,11 @@ function handleTileAction(action, path, type, tile) {
         img.draggable = false;
 
         img.onload = () => {
-            newSpinner.style.display = 'none';
+            // Guard against race conditions from rapid arrow key navigation
+            if (ss.paths[ss.index] !== path) return;
+
+            // Safely clear the spinner/stray content out before appending
+            wrap.innerHTML = ''; 
             wrap.classList.remove('anim-left', 'anim-right');
             wrap.appendChild(img);
             void wrap.offsetWidth;

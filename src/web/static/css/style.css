@@ -2263,7 +2263,7 @@ footer {
   align-items: stretch !important;
   position: relative !important;
   overflow: hidden !important;
-  --yaml-width: 450px;
+  --yaml-width: 50vw;
 }
 
 .ss-stage-pane {

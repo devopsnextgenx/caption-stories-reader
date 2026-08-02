@@ -86,6 +86,6 @@ VOLUME ["/home/appuser/.paddlex"]
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8765
 
-CMD ["uvicorn", "src.main:create_app_from_env", "--host", "0.0.0.0", "--port", "8000", "--factory"]
+CMD ["uvicorn", "src.main:create_app_from_env", "--host", "0.0.0.0", "--port", "8765", "--factory"]

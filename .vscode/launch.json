@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: FastAPI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "src.main",
+      "args": ["--mode", "api", "--host", "127.0.0.1", "--port", "8989"],
+      "jinja": true,
+      "env": {
+        "CAPTION_RELOAD": "false"
+      }
+    }
+  ]
+}

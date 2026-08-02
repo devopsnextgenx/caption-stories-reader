@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stories Reader - Caption Stories Reader</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="brand">
+            <span class="brand-icon">📖</span>
+            <span>Caption Stories Reader</span>
+        </div>
+        <nav class="nav-links">
+            <a href="/" class="nav-link" data-page="dashboard">Dashboard</a>
+            <a href="/captions-studio" class="nav-link" data-page="studio">Captions Studio</a>
+            <a href="/browse/captions" class="nav-link" data-page="browse-captions">Browse Captions</a>
+            <a href="/browse/xos" class="nav-link" data-page="browse-xos">Browse XOS</a>
+            <a href="/stories" class="nav-link" data-page="stories">Stories Reader</a>
+            <a href="/admin" class="nav-link" data-page="admin">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="main-container stories-container">
+        <div class="page-header stories-page-header">
+            <h1 class="page-title">Stories Reader</h1>
+            <p class="page-subtitle">Browse content using story &gt; page &gt; post navigation with reading-mode layout.</p>
+        </div>
+
+        {% if not stories %}
+        <div class="card stories-empty-state">
+            <h2 class="stories-empty-title">No stories found</h2>
+            <p class="stories-empty-subtitle">Expected a folder structure under <code>STORIES_FOLDER/stories/&lt;thread&gt;/ymls</code>.</p>
+        </div>
+        {% else %}
+        <div class="stories-layout">
+            <aside class="stories-sidebar">
+                <section class="stories-panel">
+                    <h2 class="stories-panel-title">Stories</h2>
+                    <div class="stories-list">
+                        {% for story in stories %}
+                        <a class="story-item {% if story.slug == active_story.slug %}active{% endif %}" href="/stories?story={{ story.slug }}">
+                            {% if story.thumbnail %}
+                            <img src="{{ story.thumbnail }}" alt="{{ story.title }} thumbnail" class="story-thumb">
+                            {% else %}
+                            <div class="story-thumb story-thumb-fallback">📚</div>
+                            {% endif %}
+                            <div class="story-item-content">
+                                <div class="story-item-title">{{ story.title }}</div>
+                                <div class="story-item-meta">{{ story.page_count }} pages · {{ story.post_count }} posts</div>
+                                {% if story.tags %}
+                                <div class="story-tags">
+                                    {% for tag in story.tags[:4] %}
+                                    <span class="story-tag">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="stories-panel">
+                    <h2 class="stories-panel-title">Pages</h2>
+                    <div class="story-pages-list">
+                        {% for page_entry in active_story.pages %}
+                        <a class="story-page-item {% if page_entry.page_number == active_page.page_number %}active{% endif %}" href="/stories?story={{ active_story.slug }}&page={{ page_entry.page_number }}">
+                            {% if page_entry.thumbnail %}
+                            <img src="{{ page_entry.thumbnail }}" alt="Page {{ page_entry.page_number }} thumbnail" class="story-page-thumb">
+                            {% else %}
+                            <div class="story-page-thumb story-page-thumb-fallback">P{{ page_entry.page_number }}</div>
+                            {% endif %}
+                            <div class="story-page-item-content">
+                                <div class="story-page-title">Page {{ page_entry.page_number }}</div>
+                                <div class="story-page-meta">{{ page_entry.post_count }} posts</div>
+                                {% if page_entry.tags %}
+                                <div class="story-tags">
+                                    {% for tag in page_entry.tags[:3] %}
+                                    <span class="story-tag">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </section>
+            </aside>
+
+            <section class="stories-reader">
+                <nav class="story-breadcrumb" aria-label="story breadcrumb">
+                    {% for crumb in breadcrumb %}
+                    <span class="story-breadcrumb-item">{{ crumb.label }}</span>{% if not loop.last %}<span class="story-breadcrumb-sep">/</span>{% endif %}
+                    {% endfor %}
+                </nav>
+
+                <div class="story-reading-toolbar">
+                    <div class="story-toolbar-group">
+                        {% if prev_page %}
+                        <a class="btn btn-secondary btn-sm" href="/stories?story={{ active_story.slug }}&page={{ prev_page.page_number }}">← Prev Page</a>
+                        {% endif %}
+                        {% if next_page %}
+                        <a class="btn btn-secondary btn-sm" href="/stories?story={{ active_story.slug }}&page={{ next_page.page_number }}">Next Page →</a>
+                        {% endif %}
+                    </div>
+                    <div class="story-toolbar-group">
+                        {% if prev_post %}
+                        <a class="btn btn-secondary btn-sm" href="/stories?story={{ active_story.slug }}&page={{ active_page.page_number }}&post={{ prev_post.post_id }}">← Prev Post</a>
+                        {% endif %}
+                        {% if next_post %}
+                        <a class="btn btn-secondary btn-sm" href="/stories?story={{ active_story.slug }}&page={{ active_page.page_number }}&post={{ next_post.post_id }}">Next Post →</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="story-post-nav">
+                    {% for post_item in active_page.posts %}
+                    <a class="story-post-link {% if active_post and post_item.post_id == active_post.post_id %}active{% endif %}" href="/stories?story={{ active_story.slug }}&page={{ active_page.page_number }}&post={{ post_item.post_id }}">Post {{ post_item.post_id }}</a>
+                    {% endfor %}
+                </div>
+
+                {% if active_page.tags %}
+                <div class="story-tags-row">
+                    {% for tag in active_page.tags %}
+                    <span class="story-tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if active_page.images %}
+                <div class="story-media-grid">
+                    {% for image in active_page.images %}
+                    <img src="{{ image }}" alt="Page {{ active_page.page_number }} image {{ loop.index }}" class="story-media-item">
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if active_post %}
+                <article class="story-post-card">
+                    <header class="story-post-header">
+                        <h2 class="story-post-title">Post {{ active_post.post_id }}</h2>
+                        <div class="story-post-stats">
+                            {% if active_post.word_count %}<span>{{ active_post.word_count }} words</span>{% endif %}
+                            {% if active_post.char_count %}<span>{{ active_post.char_count }} chars</span>{% endif %}
+                            {% if active_post.is_comment %}<span>Comment</span>{% else %}<span>Main Post</span>{% endif %}
+                        </div>
+                    </header>
+
+                    {% if active_post.tags %}
+                    <div class="story-tags-row">
+                        {% for tag in active_post.tags %}
+                        <span class="story-tag">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="story-post-content">{{ active_post.content }}</div>
+
+                    {% if active_post.images %}
+                    <div class="story-media-grid post-media-grid">
+                        {% for image in active_post.images %}
+                        <img src="{{ image }}" alt="Post {{ active_post.post_id }} image {{ loop.index }}" class="story-media-item">
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </article>
+                {% endif %}
+            </section>
+        </div>
+        {% endif %}
+    </main>
+
+    <footer>
+        Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

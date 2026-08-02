@@ -1,0 +1,8 @@
+# Project Context & Environment Rules
+
+## Terminal & Testing Environment
+Whenever the user asks to run tests, execute terminal commands, or open a new prompt, ALWAYS remind them or assume the following environment setup:
+1. **Working Directory:** First `cd /home/kira/git/devopsnextgenx/caption-stories-reader`
+2. **Python Virtual Environment:** Enable the virtual environment immediately using:
+   ```bash
+   source .venv/bin/activate

@@ -169,6 +169,12 @@ class ConfigManager:
                 has_file_handler = True
                 break
 
+        if has_file_handler and log_file:
+            try:
+                Path(log_file).touch(exist_ok=True)
+            except OSError:
+                pass
+
         if not has_file_handler and log_file:
             try:
                 file_handler = logging.FileHandler(log_file, encoding="utf-8")

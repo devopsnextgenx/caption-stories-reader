@@ -55,7 +55,7 @@ services:
     container_name: caption-stories-reader
     user: "${UID}:${GID}"
     ports:
-      - "8000:8000"
+      - "8765:8765"
     depends_on:
       - redis
       - mongodb
@@ -65,8 +65,8 @@ services:
       - ./logs:/app/logs
       - paddle-model-cache:/home/appuser/.paddlex
       - /media/data/xos:/media/data/xos
-      - /home/kira/git/devopsnextgenx/caption-stories-reader/data:/media/data/captions
-      - /media/zbox-home/admn/git/devopsnextgenx/story-site/data:/media/data/story-site
+      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/captions:/media/data/captions
+      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/story-site:/media/data/story-site
     environment:
       - PADDLE_MODEL_CACHE_DIR=/home/appuser/.paddlex
       - XOS_FOLDER=/media/data/xos

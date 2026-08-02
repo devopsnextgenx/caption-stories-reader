@@ -72,7 +72,7 @@ services:
       # On many systems `host.docker.internal` resolves to the host. Override as needed.
       - OLLAMA_HOST=http://host.docker.internal:11434
     ports:
-      - "8765:8765"
+      - "8989:8989"
     depends_on:
       - redis
       - mongodb

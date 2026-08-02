@@ -93,4 +93,4 @@ USER appuser
 
 EXPOSE 8765
 
-CMD ["uvicorn", "src.main:create_app_from_env", "--host", "0.0.0.0", "--port", "8765", "--factory"]
+CMD ["uvicorn", "src.main:create_app_from_env", "--host", "0.0.0.0", "--port", "8989", "--factory"]

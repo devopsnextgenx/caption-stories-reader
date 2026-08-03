@@ -1,0 +1,19 @@
+.admin-container {
+  max-width: 90vw !important;
+}
+.admin-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  width: 100% !important;
+}
+.admin-card {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .admin-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+

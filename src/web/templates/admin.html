@@ -4,21 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Caption Stories Reader</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        .main-container {
-            max-width: 90vw !important;
-        }
-        .admin-grid-2 {
-            width: 100% !important;
-        }
-        .admin-card {
-            width: 100%;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/core.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
-
     <header class="navbar">
         <div class="brand">
             <span class="brand-icon">⚙️</span>
@@ -34,14 +23,13 @@
         </nav>
     </header>
 
-    <main class="main-container">
+    <main class="main-container admin-container">
         <div class="page-header">
             <h1 class="page-title">Admin Dashboard</h1>
             <p class="page-subtitle">Manage configuration parameters, monitor service health, and review application logs.</p>
         </div>
 
         <div class="admin-grid-2">
-            <!-- Config Editor -->
             <div class="admin-card">
                 <div class="card-title">
                     <span>Configuration Manager (config.yml)</span>
@@ -54,7 +42,6 @@
                 <div id="config-save-msg" style="font-weight: 500; font-size: 0.9rem;"></div>
             </div>
 
-            <!-- System Logs -->
             <div class="admin-card">
                 <div class="card-title">
                     <span>System Execution Logs</span>
@@ -70,6 +57,7 @@
         Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
     </footer>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/core.js"></script>
+    <script src="/static/js/admin.js"></script>
 </body>
 </html>

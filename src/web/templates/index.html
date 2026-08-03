@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Caption Stories Reader</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/core.css">
+    <!-- dashboard may use some captions-browse styles for gallery, but we can include it -->
+    <link rel="stylesheet" href="/static/css/captions-browse.css">
 </head>
 <body>
-
     <header class="navbar">
         <div class="brand">
             <span class="brand-icon">📚</span>
@@ -68,6 +69,7 @@
         Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
     </footer>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/core.js"></script>
+    <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

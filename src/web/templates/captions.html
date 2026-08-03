@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captions Studio - Caption Stories Reader</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/core.css">
+    <link rel="stylesheet" href="/static/css/captions-browse.css">
 </head>
 <body>
-
     <header class="navbar">
         <div class="brand">
             <span class="brand-icon">🖼️</span>
@@ -25,7 +25,6 @@
 
     <main>
         <div class="grid-2" style="margin-bottom: 2rem;">
-            <!-- Upload Card -->
             <div class="card">
                 <div class="card-title">Single Image Upload & Extraction</div>
                 <label id="file-upload-area" class="dropzone" for="image-file-input">
@@ -34,9 +33,7 @@
                     <div style="font-size: 0.85rem; color: var(--text-muted);">Supports .jpg, .png, .webp, .bmp</div>
                     <input type="file" id="image-file-input" hidden accept="image/*">
                 </label>
-
                 <div id="upload-status" style="margin-top: 1rem; font-size: 0.9rem; font-weight: 500; color: #818cf8;"></div>
-
                 <div id="upload-preview-wrap" style="display: none; margin-top: 1.25rem;">
                     <div style="font-size: 0.8rem; font-weight: 600; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.6rem; text-transform: uppercase;">Preview</div>
                     <img id="upload-preview-image" src="" alt="Selected upload preview" style="width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6);" />
@@ -49,7 +46,6 @@
                 </div>
             </div>
 
-            <!-- Batch Runner Card -->
             <div class="card">
                 <div class="card-title">Pipeline Batch Processor</div>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
@@ -58,7 +54,6 @@
                 <button id="start-batch-btn" class="btn btn-primary" style="width: 100%;">
                     ⚡ Start Parallel Batch Extraction
                 </button>
-
                 <div id="batch-progress-card" style="display: none; margin-top: 1.5rem;">
                     <div id="batch-progress-status" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
                         Initializing batch processing...
@@ -84,6 +79,7 @@
         Caption Stories Reader &copy; 2026. Built with FastAPI, PaddleOCR, Ollama Visual LLM, and Qdrant.
     </footer>
 
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/core.js"></script>
+    <script src="/static/js/captions-browse.js"></script>
 </body>
 </html>

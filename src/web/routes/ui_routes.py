@@ -40,3 +40,16 @@ def browse_xos_page(request: Request):
 def stories_page(request: Request):
     """Serve the client-side Stories Reader shell."""
     return templates.TemplateResponse(request, "stories.html", {"page": "stories"})
+
+@router.get("/.well-known/appspecific/com.chrome.devtools.json", include_in_schema=False)
+def chrome_devtools_config(request: Request):
+    """Serve a quiet mock response to satisfy Chrome DevTools background polls without generating 404 logs."""
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ignored", "message": "DevTools noise handled successfully"}
+    )
+
+@router.get("/favicon.ico", include_in_schema=False)
+def favicon_shortcut(request: Request):
+    """Serve a quiet empty response for the browser favicon request to prevent 404 console errors."""
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

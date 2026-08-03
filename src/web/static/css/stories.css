@@ -336,3 +336,124 @@
   flex-wrap: wrap;
   flex-shrink: 0; /* Stops bottom element from shrinking out of view */
 }
+/* Full Screen Overlay Window Canvas */
+.reading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #090d16;
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  overflow: hidden; /* Stops whole page canvas from scrolling */
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Flexbox wrapper containing fixed controls and scrolling container */
+.reading-content-wrapper {
+  width: 80vw;
+  max-width: 1400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Floating Navigation Header (Always stays pinned at top) */
+.reading-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background-color: #090d16;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  padding: 1.5rem 0 1rem 0;
+  flex-shrink: 0; /* Prevents menu from smashing under pressure */
+  z-index: 10;
+}
+
+.reading-nav-btn {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #e2e8f0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.reading-nav-btn:hover {
+  background: rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.6);
+}
+
+/* Pinned Close Action Control Button */
+.reading-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 2.25rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s ease;
+  z-index: 11;
+}
+
+.reading-close-btn:hover {
+  color: #ef4444;
+}
+
+/* Scrollable Main Content Container Viewport */
+.reading-content {
+  color: #e2e8f0;
+  font-size: 1.15rem;
+  line-height: 1.85;
+  overflow-y: auto; /* Adds dedicated clean scrollbar here instead */
+  flex: 1; /* Fills remaining height space */
+  padding: 1.5rem 1rem 4rem 0; /* Extra base padding for safe scroll text endings */
+}
+
+.reading-content h2 {
+  font-size: 1.75rem;
+  margin-bottom: 1.5rem;
+  color: #ffffff;
+}
+
+/* Adaptive Viewports for Mobile Devices */
+@media (max-width: 768px) {
+  .reading-content-wrapper {
+    width: 92vw;
+  }
+  .reading-navigation {
+    padding: 1rem 0 0.75rem 0;
+    gap: 0.5rem;
+  }
+  .reading-nav-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  .reading-close-btn {
+    top: 0.8rem;
+    font-size: 1.85rem;
+  }
+  .reading-content {
+    font-size: 1.05rem;
+    padding-top: 1rem;
+  }
+}
+
+.reading-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+  pointer-events: none; /* Block click bubbling actions completely */
+}

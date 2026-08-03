@@ -19,6 +19,14 @@ function openCacheDB() {
     });
 }
 
+window.addEventListener('keydown', (e) => {
+    const overlay = document.getElementById('reading-overlay');
+    // Only capture event context if overlay element window view is visibly active
+    if (e.key === 'Escape' && overlay && overlay.style.display === 'flex') {
+        closeReadingMode();
+    }
+});
+
 async function getCacheEntry(url) {
     const db = await openCacheDB();
     return new Promise((resolve, reject) => {
@@ -150,17 +158,18 @@ function renderPostMainContainer(pageData) {
     const prevPostClass = currentPostIndex > 0 ? '' : 'disabled';
     const nextPostClass = currentPostIndex < pageData.posts.length - 1 ? '' : 'disabled';
     
-    const dropdownOptions = pageData.posts.map(p => `
-        <option value="${p.post_id}" ${state.activePostId === p.post_id ? 'selected' : ''}>Post ID: ${p.post_id}</option>
+    // Explicitly enforce that the option values are stringified post_id primitives
+    const dropdownOptions = pageData.posts.map((p, idx) => `
+        <option value="${p.post_id}" ${state.activePostId === p.post_id ? 'selected' : ''}>
+            Post ${idx + 1} (ID: ${p.post_id})
+        </option>
     `).join('');
 
     let activePostCardHtml = '<div class="placeholder">Select a post to display content</div>';
     if (state.activePostId) {
         const post = pageData.posts.find(p => p.post_id === state.activePostId);
         if (post) {
-            // Check for images directly on the post OR fall back to page images if it's a matching single-post format
             const targetImages = post.images || pageData.images || [];
-            
             const imagesHtml = targetImages.length ? `
                 <div class="story-media-grid post-media-grid" style="margin-bottom: 1rem;">
                     ${targetImages.map(img => `<img src="${img}" alt="post attachment image" class="story-media-item" style="max-width:100%; height:auto; border-radius:8px;">`).join('')}
@@ -176,12 +185,8 @@ function renderPostMainContainer(pageData) {
                             ${post.is_comment ? '<span>Comment</span>' : '<span>Main Post</span>'}
                         </div>
                     </header>
-                    
-                    <!-- Renders images inside the post content if they exist -->
                     ${imagesHtml}
-                    
                     <div class="story-post-content">${post.content}</div>
-                    
                     <div style="margin-top:1.5rem;">
                          <button class="btn-reading-mode btn btn-secondary btn-sm" data-post-id="${post.post_id}">Full Screen Reading Mode</button>
                     </div>
@@ -295,8 +300,26 @@ function renderApp() {
         appContainer.innerHTML = '<div class="loading-indicator">Loading stories...</div>';
         return;
     }
+
+    // 1. Capture the current scroll position of the stories list before re-rendering
+    const storiesListEl = document.querySelector('.stories-list');
+    const savedScrollTop = storiesListEl ? storiesListEl.scrollTop : 0;
+
+    // 2. Render the new layout and attach listeners
     appContainer.innerHTML = renderLayoutStructure();
     attachEventListeners();
+
+    // 3. Restore the scroll position and ensure the active item is visible
+    const newStoriesListEl = document.querySelector('.stories-list');
+    if (newStoriesListEl) {
+        newStoriesListEl.scrollTop = savedScrollTop;
+
+        // Safely bring the selected active item into view if it shifted out of bounds
+        const activeItem = newStoriesListEl.querySelector('.story-item.active');
+        if (activeItem) {
+            activeItem.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        }
+    }
 }
 
 function attachEventListeners() {
@@ -337,6 +360,16 @@ function attachEventListeners() {
         });
     }
 
+    const postDropdown = document.getElementById('dropdown-select-post');
+    if (postDropdown) {
+        postDropdown.addEventListener('change', (e) => {
+            // Enforce strict numeric type conversion
+            const selectedPostId = parseInt(e.target.value, 10);
+            if (!isNaN(selectedPostId)) {
+                loadPost(selectedPostId);
+            }
+        });
+    }
     // Previous/Next page arrows 
     document.querySelectorAll('[data-page-nav]').forEach(arrow => {
         arrow.addEventListener('click', async (e) => {
@@ -375,12 +408,76 @@ function attachEventListeners() {
             if (post) openReadingMode(post, state.activeStorySlug, state.activePageNumber);
         });
     });
+
+    // Previous Post inside Overlay
+    const overlayPrevPost = document.getElementById('reading-prev-post');
+    if (overlayPrevPost) {
+        overlayPrevPost.onclick = (e) => {
+            e.preventDefault();
+            const posts = state.pageData.posts;
+            const currentIdx = posts.findIndex(p => p.post_id === state.activePostId);
+            if (currentIdx > 0) {
+                const nextPost = posts[currentIdx - 1];
+                loadPost(nextPost.post_id);
+                openReadingMode(nextPost, state.activeStorySlug, state.activePageNumber);
+            }
+        };
+    }
+
+    // Next Post inside Overlay
+    const overlayNextPost = document.getElementById('reading-next-post');
+    if (overlayNextPost) {
+        overlayNextPost.onclick = (e) => {
+            e.preventDefault();
+            const posts = state.pageData.posts;
+            const currentIdx = posts.findIndex(p => p.post_id === state.activePostId);
+            if (currentIdx < posts.length - 1) {
+                const nextPost = posts[currentIdx + 1];
+                loadPost(nextPost.post_id);
+                openReadingMode(nextPost, state.activeStorySlug, state.activePageNumber);
+            }
+        };
+    }
+
+    // Previous Page inside Overlay
+    const overlayPrevPage = document.getElementById('reading-prev-page');
+    if (overlayPrevPage) {
+        overlayPrevPage.onclick = async (e) => {
+            e.preventDefault();
+            const currentIdx = state.activePageIndex;
+            if (currentIdx > 0) {
+                await loadPage(state.activeStorySlug, currentIdx - 1);
+                // Auto-open reading window for the first post on the new page
+                if (state.pageData.posts && state.pageData.posts.length) {
+                    openReadingMode(state.pageData.posts[0], state.activeStorySlug, state.activePageNumber);
+                }
+            }
+        };
+    }
+
+    // Next Page inside Overlay
+    const overlayNextPage = document.getElementById('reading-next-page');
+    if (overlayNextPage) {
+        overlayNextPage.onclick = async (e) => {
+            e.preventDefault();
+            const currentIdx = state.activePageIndex;
+            if (currentIdx < state.storyData.pages.length - 1) {
+                await loadPage(state.activeStorySlug, currentIdx + 1);
+                // Auto-open reading window for the first post on the new page
+                if (state.pageData.posts && state.pageData.posts.length) {
+                    openReadingMode(state.pageData.posts[0], state.activeStorySlug, state.activePageNumber);
+                }
+            }
+        };
+    }
 }
 
 // ----- Reading Mode Overlay functions -----
+// ----- Updated Reading Mode Overlay functions -----
 function openReadingMode(post, slug, pageNumber) {
     const overlay = document.getElementById('reading-overlay');
     const contentDiv = document.getElementById('reading-content');
+    
     contentDiv.innerHTML = `
         <h2>Post ${post.post_id}</h2>
         <div class="story-post-content">${post.content}</div>
@@ -390,13 +487,19 @@ function openReadingMode(post, slug, pageNumber) {
 
     const posts = state.pageData.posts;
     const currentIndex = posts.findIndex(p => p.post_id === post.post_id);
-    document.getElementById('reading-prev-post').style.display = currentIndex > 0 ? 'inline-block' : 'none';
-    document.getElementById('reading-next-post').style.display = currentIndex < posts.length - 1 ? 'inline-block' : 'none';
+    const pageIndex = state.activePageIndex;
 
-    const pages = state.storyData.pages;
-    const pageIndex = pages.findIndex(p => p.page_number === pageNumber);
-    document.getElementById('reading-prev-page').style.display = pageIndex > 0 ? 'inline-block' : 'none';
-    document.getElementById('reading-next-page').style.display = pageIndex < pages.length - 1 ? 'inline-block' : 'none';
+    // Grab elements
+    const prevPageBtn = document.getElementById('reading-prev-page');
+    const prevPostBtn = document.getElementById('reading-prev-post');
+    const nextPostBtn = document.getElementById('reading-next-post');
+    const nextPageBtn = document.getElementById('reading-next-page');
+
+    // Keep visible but conditionally apply standard disabled DOM states
+    if (prevPageBtn) prevPageBtn.disabled = !(pageIndex > 0);
+    if (prevPostBtn) prevPostBtn.disabled = !(currentIndex > 0);
+    if (nextPostBtn) nextPostBtn.disabled = !(currentIndex < posts.length - 1);
+    if (nextPageBtn) nextPageBtn.disabled = !(pageIndex < state.storyData.pages.length - 1);
 
     overlay.dataset.currentPostIndex = currentIndex;
     overlay.dataset.currentPageIndex = pageIndex;

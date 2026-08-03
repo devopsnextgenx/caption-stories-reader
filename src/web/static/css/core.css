@@ -120,6 +120,10 @@ body {
   font-size: 1rem;
 }
 
+.index-container {
+  max-width: 90vw;
+}
+
 /* ── cards ── */
 .card {
   background: var(--bg-card);

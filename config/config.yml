@@ -132,7 +132,8 @@ data:
   # Folder where caption images are uploaded and processed.
   captions_folder: "data/captions"
   # Folder containing story-site assets or output data.
-  stories_folder: "data/story-site"
+  # stories_folder: "data/story-site"
+  stories_folder: "/media/zbox-home/admn/git/devopsnextgenx/story-site/data"
   # Supported image formats for caption processing.
   supported_formats: [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".webp"]
   # Supported formats for XOS browsing and album viewing.

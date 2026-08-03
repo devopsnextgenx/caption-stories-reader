@@ -83,7 +83,8 @@ services:
       - paddle-model-cache:/home/appuser/.paddlex:U
       - /media/data/xos:/media/data/xos:U
       - /home/kira/git/devopsnextgenx/caption-stories-reader/data/captions:/media/data/captions:U
-      - /home/kira/git/devopsnextgenx/caption-stories-reader/data/story-site:/media/data/story-site:U
+      # - /home/kira/git/devopsnextgenx/caption-stories-reader/data/story-site:/media/data/story-site:U
+      - /media/zbox-home/admn/git/devopsnextgenx/story-site/data:/media/data/story-site:U
 
 volumes:
   paddle-model-cache:

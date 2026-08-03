@@ -10,7 +10,7 @@ from ..admin.config_manager import ConfigManager
 from ..admin.admin_service import AdminService
 from ..captions.single_image_processor import SingleImageProcessor
 from ..captions.batch_pipeline_processor import BatchPipelineProcessor
-from .routes import admin_routes, captions_routes, ui_routes
+from .routes import admin_routes, captions_routes, ui_routes, stories_routes
 
 
 def create_app(config_path: str = "config/config.yml") -> FastAPI:
@@ -75,5 +75,6 @@ def create_app(config_path: str = "config/config.yml") -> FastAPI:
     app.include_router(ui_routes.router)
     app.include_router(admin_routes.router)
     app.include_router(captions_routes.router)
+    app.include_router(stories_routes.router)
 
     return app

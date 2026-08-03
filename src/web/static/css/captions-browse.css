@@ -1,4 +1,10 @@
 /* ── Browser toolbar ── */
+.browse-container {
+  max-width: 90vw;
+}
+.captions-container {
+  max-width: 90vw;
+}
 .browser-toolbar {
   display: flex;
   align-items: center;

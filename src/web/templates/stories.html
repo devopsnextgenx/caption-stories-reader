@@ -28,11 +28,15 @@
 
     <main class="main-container stories-container">
         <div class="page-header stories-page-header">
-            <h1 class="page-title">Stories Reader</h1>
-            <p class="page-subtitle">Browse content using story &gt; page &gt; post navigation with reading-mode layout.</p>
+            <div>
+                <h1 class="page-title">Stories Reader</h1>
+                <p class="page-subtitle">Browse content using story &gt; page &gt; post navigation with reading-mode layout.</p>
+            </div>
+            <!-- Added Purge IndexDB Button -->
+            <button id="btn-purge-cache" class="btn-purge">🧹 Purge Cache & Reload</button>
         </div>
 
-        <!-- Dynamic content will be rendered here -->
+        <!-- Dynamic layout rendering matching wireframe -->
         <div id="stories-app">
             <div class="loading-indicator">Loading stories...</div>
         </div>
